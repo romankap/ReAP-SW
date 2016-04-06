@@ -1,0 +1,6 @@
+\section{Conclusions}
+\label{sec:conclusions}
+
+Methods for improving performance and energy consumption of SpMV on many-cores have been presented and analyzed. The issue addressed in the low operational-intensity of SpMV on very large matrices on external storage, resulting in I/O-bound execution. To reduce traffic from external storage, we apply BZIP2 lossless compression on top of CSR-based space-efficient sparse-matrix representation. The many-core is engaged in decompression, in addition to matrix multiplication. Trading additional computation off for reduced data read from external storage is shown beneficial, resulting in average speedup of 5 and average energy saving of 43\% on a set of sample large sparse matrices. 
+
+The roofline model has been employed to explain the benefit of this approach and to provide architectural insight. The results may be extended beyond SpMV to any low operational-intensity computation on many-cores of big data sets. 

@@ -1,0 +1,89 @@
+\documentclass[pageno]{jpaper}
+
+%%% Shortcut to start an equation
+\newcommand{\be}{\begin{equation}}
+	\newcommand{\ee}{\end{equation}}
+\newcommand{\specialcell}[2][l]{%
+	\begin{tabular}[#1]{@{}l@{}}#2\end{tabular}}
+
+%replace XXX with the submission number you are given from the PACT submission site.
+\newcommand{\pactsubmissionnumber}{43}
+
+\usepackage[normalem]{ulem}
+\usepackage{pdfpages}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{titlesec}
+\usepackage{amsmath}
+\usepackage{mathtools}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{filecontents}
+\usepackage{csvsimple}
+\usepackage[T1]{fontenc}
+\usepackage{units}
+\usepackage{tikz}
+
+\usepackage{subfig}
+\usepackage[margin=0.15cm]{caption}
+\captionsetup{belowskip=18pt,aboveskip=4pt}
+
+
+\usetikzlibrary{shapes.geometric, arrows,calc}
+
+\titleformat{\subsubsection}
+{\normalfont\normalsize\itshape}{\thesubsubsection}{1em}{}
+\titlespacing*{\subsubsection}{0pt}{3.25ex plus 1ex minus .2ex}{0ex plus .2ex}
+
+
+\pgfplotsset{xticklabel={\tick},scaled x ticks=false}
+\pgfplotsset{plot coordinates/math parser=false}
+\tikzset{
+	treenode/.style = {shape=rectangle, rounded corners,
+		draw, anchor=center,
+		text width=5em, align=center,
+		top color=white, bottom color=blue!20,
+		inner sep=1ex},
+	decision/.style = {treenode, diamond, inner sep=0pt},
+	root/.style     = {treenode, font=\Large, bottom color=red!30},
+	env/.style      = {treenode, font=\ttfamily\normalsize},
+	finish/.style   = {root, bottom color=green!40},
+	dummy/.style    = {circle,draw}
+}
+\newcommand{\yes}{edge node [above] {yes}}
+\newcommand{\no}{edge  node [left]  {no}}
+\newcommand{\decompressRepeatFilter}{20}
+\newcommand{\mulRepeatFilter}{5}
+\newcommand{\readRepeatFilter}{20}
+\newcommand{\minipageWidth}{0.49\textwidth}
+
+
+
+
+\begin{document}
+	
+	\title{Implementing Smith-Waterman Scoring Algorithm on the Resistive Associative Processor}
+	
+	\date{}
+	\maketitle
+	
+	\thispagestyle{empty}
+	
+	\begin{abstract}
+
+	\end{abstract}
+	
+	\input{Sections/introduction}
+	\input{Sections/ReAP}
+%	\input{Sections/ExternalSpMV}
+%	\input{Sections/ExternalRoofline}
+%	\input{Sections/ExternalSpMVandBZIP2}
+%	\input{Sections/EnergyConsumption}
+	%\newpage
+	\input{Sections/Conclusions}
+	
+	\bibliographystyle{IEEEtranS}
+	\bibliography{references}
+	
+\end{document}
+

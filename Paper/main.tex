@@ -58,7 +58,20 @@
 \newcommand{\minipageWidth}{0.49\textwidth}
 
 
-
+%\makeatletter
+%\pgfplotsset{
+%	/pgfplots/flexible xticklabels from table/.code n args={3}{
+%		\pgfplotstableread[#3]{#1}\coordinate@table
+%		\pgfplotstablegetcolumn{#2}\of{\coordinate@table}\to\pgfplots@xticklabels
+%		\let\pgfplots@xticklabel=\pgfplots@user@ticklabel@list@x
+%	},
+%	/pgfplots/flexible yticklabels from table/.code n args={3}{
+%		\pgfplotstableread[#3]{#1}\coordinate@table
+%		\pgfplotstablegetcolumn{#2}\of{\coordinate@table}\to\pgfplots@yticklabels
+%		\let\pgfplots@yticklabel=\pgfplots@user@ticklabel@list@y
+%	}
+%}
+%\makeatother
 
 \begin{document}
 	
@@ -74,16 +87,16 @@
 	\end{abstract}
 	
 	\input{Sections/introduction}
-	\input{Sections/ReAP}
+%	\input{Sections/SPMFormats}
 %	\input{Sections/ExternalSpMV}
 %	\input{Sections/ExternalRoofline}
 %	\input{Sections/ExternalSpMVandBZIP2}
 %	\input{Sections/EnergyConsumption}
-	%\newpage
-	\input{Sections/Conclusions}
-	
-	\bibliographystyle{IEEEtranS}
-	\bibliography{references}
+%	%\newpage
+%	\input{Sections/Conclusions}
+%	
+%	\bibliographystyle{IEEEtranS}
+%	\bibliography{references}
 	
 \end{document}
 

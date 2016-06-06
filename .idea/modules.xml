@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/ReAP-SW.iml" filepath="$PROJECT_DIR$/.idea/ReAP-SW.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/ReCAM.iml" filepath="$PROJECT_DIR$/.idea/ReCAM.iml" />
     </modules>
   </component>
 </project>

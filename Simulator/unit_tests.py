@@ -13,7 +13,7 @@ def test():
     storage.loadData(32, 1, secondCol, 0, len(secondCol))
 
     print "==== Performing ADD ==== "
-    simulator.addCycles(storage.addSub(0, 4, 0, 0, 1, '-'))
+    simulator.execute(storage.addSub(0, 4, 0, 0, 1, '-'))
 
     print "==== Printing ReCAM contents==== "
     for i in range(len(firstCol)):

@@ -19,9 +19,10 @@ class ReCAM:
         self.sizeInBytes = size_Bytes
         self.bitsPerRow = bitsPerRow
         self.bytesPerRow = bitsPerRow/8
-        self.rowsNum = size_Bytes / (bitsPerRow/8)
+        self.rowsNum = size_Bytes // (bitsPerRow//8)
+        self.columnsNumber = 0
 
-        self.crossbarArray = [[] for x in xrange(self.rowsNum)]
+        self.crossbarArray = [[] for x in range(self.rowsNum)]
         self.crossbarColumns = []
 
     ### ------------------------------------------------------------ ###
@@ -30,10 +31,13 @@ class ReCAM:
         self.crossbarColumns = column_widths
 
     ### ------------------------------------------------------------ ###
-    def loadData(self, column_width, column_index, column, start_row, end_row):
+    def loadData(self, column_width, column, start_row, end_row, column_index=-1):
         self.crossbarColumns.append(column_width)
         for curr_row in range(start_row, end_row):
             self.crossbarArray[curr_row].append(column[curr_row - start_row])
+
+        ++self.columnsNumber
+        if column_index == -1: column_index = self.columnsNumber
 
     ### ------------------------------------------------------------ ###
     # Shift specific column values several rows up or down
@@ -99,6 +103,21 @@ class ReCAM:
 
         # cycle count
         return (max(self.crossbarColumns[colA], self.crossbarColumns[colA]))**2
+
+    ### ------------------------------------------------------------ ###
+    # TODO: Add print
+    def printArray(self, start_row=0, end_row=-1, start_col=0, end_col=-1):
+        if end_row == -1: end_row=self.rowsNum
+        if end_col == -1: end_col = self.rowsNum
+
+        for row in range(start_row, end_row):
+            col_list = []
+            for col in range(start_col,end_col):
+                col_list.append(self.crossbarArray[row][col])
+
+            print(col_list)
+
+
 
 '''
 def test():

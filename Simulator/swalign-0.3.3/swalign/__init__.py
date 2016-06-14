@@ -241,7 +241,7 @@ class LocalAlignment(object):
 
         if self.verbose:
             self.dump_matrix(ref, query, matrix, path)
-            print aln
+            print (aln)
             print (max_row, max_col), max_val
 
         cigar = _reduce_cigar(aln)

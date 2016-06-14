@@ -1,4 +1,15 @@
+import os,sys
 import ReCAM, Simulator
+import SmithWaterman
+
+'''lib_path = os.path.abspath(os.path.join('swalign-0.3.3'))
+sys.path.append(lib_path)
+import swalign'''
+
+
+def SW_test():
+    # choose your own values here… 2 and -1 are common.
+    SmithWaterman.main()
 
 def test():
     simulator = Simulator.Simulator()
@@ -9,8 +20,8 @@ def test():
     firstCol = [1,2,3,4]
     secondCol = [10,20,30,40]
 
-    storage.loadData(32, 0, firstCol, 0, len(firstCol))
-    storage.loadData(32, 1, secondCol, 0, len(secondCol))
+    storage.loadData(32, firstCol, 0, len(firstCol))
+    storage.loadData(32, secondCol, 0, len(secondCol))
 
     print("==== Performing ADD ==== ")
     simulator.execute(storage.addSub(0, 4, 0, 0, 1, '-'))
@@ -23,7 +34,7 @@ def test():
         print("i =",i, ":", storage.crossbarArray[i][0],storage.crossbarArray[i][1])
 
 
-
     print("total cycles = ", simulator.getCycleCount())
 
-test()
+#test()
+SW_test()

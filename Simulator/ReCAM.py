@@ -15,11 +15,11 @@ import FixedPoint
 
 
 class ReCAM:
-    def __init__(self, size_Bytes, bitsPerRow=128):
+    def __init__(self, size_Bytes, bytesPerRow=32):
         self.sizeInBytes = size_Bytes
-        self.bitsPerRow = bitsPerRow
-        self.bytesPerRow = bitsPerRow/8
-        self.rowsNum = size_Bytes // (bitsPerRow//8)
+        self.bitsPerRow = bytesPerRow*8
+        self.bytesPerRow = bytesPerRow
+        self.rowsNum = size_Bytes // bytesPerRow
         self.columnsNumber = 0
 
         self.crossbarArray = [[] for x in range(self.rowsNum)]
@@ -31,17 +31,22 @@ class ReCAM:
         self.crossbarColumns = column_widths
 
     ### ------------------------------------------------------------ ###
-    def loadData(self, column_width, column, start_row, end_row, column_index=-1):
-        self.crossbarColumns.append(column_width)
-        for curr_row in range(start_row, end_row):
-            self.crossbarArray[curr_row].append(column[curr_row - start_row])
+    def loadData(self, column_width, column_data, start_row, end_row, column_index=-1):
+        if column_index == -1:
+            self.crossbarColumns.append(column_width)
+            for curr_row in range(start_row, end_row):
+                self.crossbarArray[curr_row].append(column_data[curr_row - start_row])
 
-        ++self.columnsNumber
-        if column_index == -1: column_index = self.columnsNumber
+            ++self.columnsNumber
+
+        else:
+            self.crossbarColumns.append(column_width)
+            for curr_row in range(start_row, end_row):
+                self.crossbarArray[curr_row][column_index] = column_data[curr_row - start_row]
 
     ### ------------------------------------------------------------ ###
     # Shift specific column values several rows up or down
-    def shiftColumn(self, start_row, end_row, col, numOfRowsToShift):
+    def shiftColumn(self, start_row, end_row, col, numOfRowsToShift=1):
         # Decide whether to shift up or down
         if numOfRowsToShift > 0: #Shift down
             shift_range = range(end_row, start_row)

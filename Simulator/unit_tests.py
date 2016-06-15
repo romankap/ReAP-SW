@@ -1,6 +1,6 @@
 import os,sys
 import ReCAM, Simulator
-import SmithWaterman
+import Serial_SmithWaterman
 
 '''lib_path = os.path.abspath(os.path.join('swalign-0.3.3'))
 sys.path.append(lib_path)
@@ -9,7 +9,7 @@ import swalign'''
 
 def SW_test():
     # choose your own values here… 2 and -1 are common.
-    SmithWaterman.main()
+    Serial_SmithWaterman.main("ATGCAAA", "TGCAAAA")
 
 def test():
     simulator = Simulator.Simulator()

@@ -31,17 +31,20 @@ class ReCAM:
         self.crossbarColumns = column_widths
 
     ### ------------------------------------------------------------ ###
-    def loadData(self, column_width, column_data, start_row, end_row, column_index=-1):
-        if column_index == -1:
+    def loadData(self, column_width, column_data, start_row, column_index=-1):
+        if column_index == -1 or column_index+1 > self.columnsNumber:
             self.crossbarColumns.append(column_width)
-            for curr_row in range(start_row, end_row):
-                self.crossbarArray[curr_row].append(column_data[curr_row - start_row])
+            for i in range(0, self.rowsNum):
+                self.crossbarArray[i].append(None)
 
-            ++self.columnsNumber
+            for curr_row in range(start_row, min(self.rowsNum, start_row+len(column_data))):
+                self.crossbarArray[curr_row][self.columnsNumber] = column_data[curr_row - start_row]
+
+            self.columnsNumber += 1
 
         else:
             self.crossbarColumns.append(column_width)
-            for curr_row in range(start_row, end_row):
+            for curr_row in range(start_row, self.rowsNum):
                 self.crossbarArray[curr_row][column_index] = column_data[curr_row - start_row]
 
     ### ------------------------------------------------------------ ###
@@ -72,11 +75,11 @@ class ReCAM:
     # Simple arithmetic - Add / Subtract
     def addSub(self, start_row, end_row, res_col, colA, colB, operation):
         if operation == '+':
-            for i in range(start_row,end_row):
+            for i in range(start_row,end_row+1):
                 self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] + self.crossbarArray[i][colB]
 
         elif operation == '-':
-            for i in range(start_row, end_row):
+            for i in range(start_row, end_row+1):
                 self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] - self.crossbarArray[i][colB]
 
         if res_col != colA:
@@ -110,19 +113,13 @@ class ReCAM:
         return (max(self.crossbarColumns[colA], self.crossbarColumns[colA]))**2
 
     ### ------------------------------------------------------------ ###
-    # TODO: Add print
+    # Print array contents
     def printArray(self, start_row=0, end_row=-1, start_col=0, end_col=-1):
         if end_row == -1: end_row=self.rowsNum
         if end_col == -1: end_col = self.rowsNum
 
         for row in range(start_row, end_row):
-            col_list = []
-            for col in range(start_col,end_col):
-                col_list.append(self.crossbarArray[row][col])
-
-            print(col_list)
-
-
+            print(self.crossbarArray[row])
 
 '''
 def test():

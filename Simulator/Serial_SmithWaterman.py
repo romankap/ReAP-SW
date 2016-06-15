@@ -14,26 +14,29 @@ import sys
 import unittest
 
 
+
 # These scores are taken from Wikipedia.
 # en.wikipedia.org/wiki/Smith%E2%80%93Waterman_algorithm
 match    = 2
 mismatch = -1
 gap      = -1
+gap_start      = -2
+gap_extend      = -1
 seq1     = None
 seq2     = None
 
 
-def main():
+def main(input_seq1="ATGCAT", input_seq2="TGCAA"):
     #try:
         #parse_cmd_line()
     #except ValueError as err:
     #    print('error:', err)
     #    return
     global seq1
-    seq1 = "ATAGACGACATACAGACAGCATACAGACAGCATACAA"
+    seq1 = input_seq1
 
     global seq2
-    seq2 = "TTTAGCATGCGCATATCAGCAATACAGACAGATACG"
+    seq2 = input_seq2
 
     # The scoring matrix contains an extra row and column for the gap (-), hence
     # the +1 here.
@@ -42,12 +45,11 @@ def main():
 
     # Initialize the scoring matrix.
     score_matrix, start_pos = create_score_matrix(rows, cols)
-    print_matrix(score_matrix)
-    print("max pos = ", start_pos)
+    print_matrix(score_matrix, start_pos)
 
     # Traceback. Find the optimal path through the scoring matrix. This path
     # corresponds to the optimal local sequence alignment.
-    seq1_aligned, seq2_aligned = traceback(score_matrix, start_pos)
+    '''seq1_aligned, seq2_aligned = traceback(score_matrix, start_pos)
     assert len(seq1_aligned) == len(seq2_aligned), 'aligned strings are not the same size'
 
     # Pretty print the results. The printing follows the format of BLAST results
@@ -65,7 +67,7 @@ def main():
         seq2_slice = seq2_aligned[i:i+60]
         print('Sbjct  {0:<4}  {1}  {2:<4}'.format(i + 1, seq2_slice, i + len(seq2_slice)))
         print()
-
+    '''
 
 def parse_cmd_line():
     '''Parse the command line arguments.
@@ -91,12 +93,19 @@ def create_score_matrix(rows, cols):
     '''
     score_matrix = [[0 for col in range(cols)] for row in range(rows)]
 
+    # Affine gap matrices
+    E_matrix = [[0 for col in range(cols)] for row in range(rows)]
+    F_matrix = [[0 for col in range(cols)] for row in range(rows)]
+
     # Fill the scoring matrix.
     max_score = 0
     max_pos   = None    # The row and columbn of the highest score in matrix.
     for i in range(1, rows):
         for j in range(1, cols):
-            score = calc_score(score_matrix, i, j)
+            E_matrix[i][j] = max(E_matrix[i][j-1] + gap_extend, score_matrix[i][j-1] + gap_start)
+            F_matrix[i][j] = max(F_matrix[i-1][j] + gap_extend, score_matrix[i-1][j] + gap_start)
+
+            score = calc_score(score_matrix, E_matrix, F_matrix, i, j)
             if score > max_score:
                 max_score = score
                 max_pos   = (i, j)
@@ -108,16 +117,15 @@ def create_score_matrix(rows, cols):
     return score_matrix, max_pos
 
 
-def calc_score(matrix, x, y):
+def calc_score(matrix, E_matrix, F_matrix, x, y):
     '''Calculate score for a given x, y position in the scoring matrix.
-
     The score is based on the up, left, and upper-left neighbors.
     '''
     similarity = match if seq1[x - 1] == seq2[y - 1] else mismatch
 
     diag_score = matrix[x - 1][y - 1] + similarity
-    up_score   = matrix[x - 1][y] + gap
-    left_score = matrix[x][y - 1] + gap
+    up_score   = F_matrix[x-1][y]   #matrix[x - 1][y] + gap
+    left_score = E_matrix[x][y-1]   #matrix[x][y - 1] + gap
 
     return max(0, diag_score, up_score, left_score)
 
@@ -210,7 +218,7 @@ def alignment_string(aligned_seq1, aligned_seq2):
     return ''.join(alignment_string), idents, gaps, mismatches
 
 
-def print_matrix(matrix):
+def print_matrix(matrix, max_pos):
     '''Print the scoring matrix.
 
     ex:
@@ -225,6 +233,8 @@ def print_matrix(matrix):
         print (row)
         #for col in row:
         #    print('{0:>4}'.format(col))
+
+    print("Max score cell index = ",max_pos)
 
 
 class ScoreMatrixTest(unittest.TestCase):

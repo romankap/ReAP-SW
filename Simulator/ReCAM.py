@@ -49,27 +49,28 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Shift specific column values several rows up or down
-    def shiftColumn(self, start_row, end_row, col, numOfRowsToShift=1):
+    def shiftColumn(self, start_row, end_row, col_index, numOfRowsToShift=1):
         # Decide whether to shift up or down
         if numOfRowsToShift > 0: #Shift down
-            shift_range = range(end_row, start_row)
+            shift_range = range(end_row, start_row-1, -1)
         else:   #Shift up
             shift_range = range(start_row, end_row)
 
         for i in shift_range:
-            self.crossbarArray[i+numOfRowsToShift][col] = self.crossbarArray[i][col]
+            self.crossbarArray[i+numOfRowsToShift][col_index] = self.crossbarArray[i][col_index]
 
         # Zero-fill empty rows
-        if numOfRowsToShift > 0:  # Shift down
-            zero_fill_range = range(start_row, start_row + numOfRowsToShift)
-        else:  # Shift up
-            zero_fill_range = range(start_row + numOfRowsToShift + 1, start_row)
-
-        for j in zero_fill_range:
-            self.crossbarArray[j][col] = 0
+        # if numOfRowsToShift > 0:  # Shift down
+        #     zero_fill_range = range(start_row, start_row + numOfRowsToShift)
+        # else:  # Shift up
+        #     zero_fill_range = range(start_row + numOfRowsToShift + 1, start_row)
+        #
+        # for j in zero_fill_range:
+        #     self.crossbarArray[j][col] = 0
 
         # cycle count
-        return 3 * self.crossbarColumns[col]
+        return 3 * numOfRowsToShift * self.crossbarColumns[col_index]
+
 
     ### ------------------------------------------------------------ ###
     # Simple arithmetic - Add / Subtract
@@ -120,6 +121,10 @@ class ReCAM:
 
         for row in range(start_row, end_row):
             print(self.crossbarArray[row])
+
+    ### ------------------------------------------------------------ ###
+    # Calculate match score
+    #TODO: Add the function 2bitMatchScore(self, start_row, end_row, res_row)
 
 '''
 def test():

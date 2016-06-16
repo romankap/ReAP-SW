@@ -19,15 +19,26 @@ def SW_on_ReCAM(input_seq1="ATGCAT", input_seq2="TGCAAG"):
     # In every iteration, seq2 will be pushed down and the appropriate rows will be compared
 
     first_row = len(seq2)
-    storage.loadData(2, seq2, 0)
 
-    storage.loadData(2, seq1, first_row, 1)
+    #Initialization
+    seqA_col_index = 0; seqB_col_index = 1
+    storage.loadData(2, seq1, first_row)
+    storage.loadData(2, seq2, 0, seqB_col_index)
 
     for i in range(6):
         storage.loadData(32, zero_vector, 0)
 
     # Definitions
-    E_col = 2; F_col = 3; first_AD_col = 4; last_AD_col = 6; temp_col = 7
+    E_col_index = 2; F_col_index = 3; first_AD_col_index = 4; last_AD_col_index = 6; temp_col_index = 7
+
+    # for i in range (0, len(seq1)+len(seq2)+2):
+    #     right_AD = (i % 3) + first_AD_col_index;
+    #     middle_AD = ((i-1) % 3) + first_AD_col_index;
+    #     left_AD = ((i-2) % 3) + first_AD_col_index;
+    #
+    #     storage.shiftColumn(0, len(seq2)-1, seqB_col_index,1)
+
+    storage.shiftColumn(0, len(seq2)-1, seqB_col_index, 1)
 
 
     storage.printArray()

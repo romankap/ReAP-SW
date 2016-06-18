@@ -12,7 +12,7 @@ import os,sys
 lib_path = os.path.abspath(os.path.join('spfpm-1.1'))
 sys.path.append(lib_path)
 import FixedPoint
-
+from tabulate import tabulate
 
 class ReCAM:
     def __init__(self, size_Bytes, bytesPerRow=32):
@@ -49,7 +49,7 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Shift specific column values several rows up or down
-    def shiftColumn(self, start_row, end_row, col_index, numOfRowsToShift=1):
+    def shiftColumn(self, col_index, start_row, end_row, numOfRowsToShift=1):
         # Decide whether to shift up or down
         if numOfRowsToShift > 0: #Shift down
             shift_range = range(end_row, start_row-1, -1)
@@ -74,7 +74,9 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Simple arithmetic - Add / Subtract
-    def addSub(self, start_row, end_row, res_col, colA, colB, operation):
+    def rowWiseOperation(self, colA, colB, res_col, start_row, end_row, operation):
+        max_operation_string = "max"
+
         if operation == '+':
             for i in range(start_row,end_row+1):
                 self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] + self.crossbarArray[i][colB]
@@ -83,25 +85,47 @@ class ReCAM:
             for i in range(start_row, end_row+1):
                 self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] - self.crossbarArray[i][colB]
 
-        if res_col != colA:
-            cycles_per_bit = 2**3
+        elif operation == max_operation_string:
+            for i in range(start_row, end_row + 1):
+                self.crossbarArray[i][res_col] = max(self.crossbarArray[i][colA], self.crossbarArray[i][colB])
         else:
-            cycles_per_bit = 2**2
+            print("!!! Unknown Operation !!!")
+
+
+        if operation == '-' or operation == '+':
+            if res_col != colA:
+                cycles_per_bit = 2**3
+            else:
+                cycles_per_bit = 2**2
+        elif operation == max_operation_string:
+            cycles_per_bit = 2
 
         return cycles_per_bit * max(self.crossbarColumns[colA],self.crossbarColumns[colB])
 
     ### ------------------------------------------------------------ ###
     # Simple variable-constant arithmetic  - Add / Subtract
-    def addSubWithConstant(self, start_row, end_row, res_col, colA, const, operation):
+    def rowWiseOperationWithConstant(self, colA, const_scalar, res_col, start_row, end_row, operation):
+        max_operation_string = "max"
+
         if operation == '+':
-            for i in range(start_row, end_row):
-                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] + const
+            for i in range(start_row, end_row+1):
+                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] + const_scalar
 
         elif operation == '-':
-            for i in range(start_row, end_row):
-                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] - const
+            for i in range(start_row, end_row+1):
+                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] - const_scalar
 
-        cycles_per_bit = 2 ** 2
+        elif operation == max_operation_string:
+            for i in range(start_row, end_row + 1):
+                self.crossbarArray[i][res_col] = max(self.crossbarArray[i][colA], const_scalar)
+
+        else:
+            print("!!! Unknown Operation !!!")
+
+        if operation == max_operation_string:
+            cycles_per_bit = 2
+        else:
+            cycles_per_bit = 2 ** 2
         return cycles_per_bit * self.crossbarColumns[colA]
 
     ### ------------------------------------------------------------ ###
@@ -114,17 +138,58 @@ class ReCAM:
         return (max(self.crossbarColumns[colA], self.crossbarColumns[colA]))**2
 
     ### ------------------------------------------------------------ ###
+    # Simple variable-constant arithmetic  - Add / Subtract
+    def getScalarFromColumn(self, col_index, start_row, end_row, operation):
+        max_operation_string = "max"
+
+        if operation == '+':
+            for i in range(start_row, end_row+1):
+                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] + const_scalar
+
+        elif operation == '-':
+            for i in range(start_row, end_row+1):
+                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] - const_scalar
+
+        elif operation == max_operation_string:
+            for i in range(start_row, end_row + 1):
+                self.crossbarArray[i][res_col] = max(self.crossbarArray[i][colA], const_scalar)
+
+        else:
+            print("!!! Unknown Operation !!!")
+
+        if operation == max_operation_string:
+            cycles_per_bit = 2
+        else:
+            cycles_per_bit = 2 ** 2
+        return cycles_per_bit * self.crossbarColumns[colA]
+
+    ### ------------------------------------------------------------ ###
     # Print array contents
-    def printArray(self, start_row=0, end_row=-1, start_col=0, end_col=-1):
+    def printArray(self, start_row=0, end_row=-1, start_col=0, end_col=-1, header="", tablefmt="plain"):
         if end_row == -1: end_row=self.rowsNum
         if end_col == -1: end_col = self.rowsNum
 
-        for row in range(start_row, end_row):
-            print(self.crossbarArray[row])
+        # for row in range(start_row, end_row):
+        #     print(self.crossbarArray[row])
+
+        print(tabulate(self.crossbarArray, header, tablefmt, stralign="center")) #other format option is "grid"
 
     ### ------------------------------------------------------------ ###
     # Calculate match score
-    #TODO: Add the function 2bitMatchScore(self, start_row, end_row, res_row)
+    def DNAbpMatch(self, colA, colB, res_col, start_row, end_row, bp_match_score, bp_mismatch_score):
+        for curr_row in range(start_row, end_row+1):
+            is_bp_match = (self.crossbarArray[curr_row][colA] == self.crossbarArray[curr_row][colB])
+            self.crossbarArray[curr_row][res_col] = bp_match_score if is_bp_match else bp_mismatch_score
+
+        return 2 + 4*(max(self.crossbarColumns[colA], self.crossbarColumns[colA]))
+
+    '''
+    You have only 4 equal combinations (0/0, 1/1, 2/2 and 3/3). The rest are mismatch.
+    So what u do is you initialize the result bitcolumn with 0 (that’s TAGSET + write – 2 cycles), and then 4x2 (compare + write) cycles- total of 10 cycles.
+    (TAGSET is a command that sets all tags…. Can be implemented by triggering the “set” input of TAG latch).
+    '''
+
+    ### ------------------------------------------------------------ ###
 
 '''
 def test():

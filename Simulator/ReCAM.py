@@ -9,6 +9,7 @@ except ImportError:
     HAVE_MATPLOTLIB = False
 
 import os,sys
+import math
 lib_path = os.path.abspath(os.path.join('spfpm-1.1'))
 sys.path.append(lib_path)
 import FixedPoint
@@ -142,26 +143,27 @@ class ReCAM:
     def getScalarFromColumn(self, col_index, start_row, end_row, operation):
         max_operation_string = "max"
 
+        result = 0
+        result_row_index = -1
         if operation == '+':
             for i in range(start_row, end_row+1):
-                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] + const_scalar
-
-        elif operation == '-':
-            for i in range(start_row, end_row+1):
-                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] - const_scalar
-
+                result += self.crossbarArray[i][col_index]
         elif operation == max_operation_string:
             for i in range(start_row, end_row + 1):
-                self.crossbarArray[i][res_col] = max(self.crossbarArray[i][colA], const_scalar)
-
+                if self.crossbarArray[i][col_index] > result:
+                    result = self.crossbarArray[i][col_index]
+                    result_row_index = i
         else:
             print("!!! Unknown Operation !!!")
 
+
         if operation == max_operation_string:
             cycles_per_bit = 2
+            return cycles_per_bit * self.crossbarColumns[col_index], result, result_row_index
         else:
             cycles_per_bit = 2 ** 2
-        return cycles_per_bit * self.crossbarColumns[colA]
+            return cycles_per_bit * self.crossbarColumns[col_index] * math.ceil( math.log( len(self.crossbarColumns[col_index])))
+
 
     ### ------------------------------------------------------------ ###
     # Print array contents

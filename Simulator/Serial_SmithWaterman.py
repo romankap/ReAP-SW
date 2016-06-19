@@ -12,7 +12,7 @@ import os
 import re
 import sys
 import unittest
-
+import tabulate
 
 
 # These scores are taken from Wikipedia.
@@ -26,7 +26,7 @@ seq1     = None
 seq2     = None
 
 
-def main(input_seq1="ATGCAT", input_seq2="TGCAA"):
+def main(input_seq1="ATG", input_seq2="TGC"):
     #try:
         #parse_cmd_line()
     #except ValueError as err:

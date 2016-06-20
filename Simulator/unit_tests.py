@@ -9,7 +9,7 @@ import swalign'''
 
 def SW_test():
     # choose your own values here… 2 and -1 are common.
-    Serial_SmithWaterman.main("ATGCAAA", "TGCAAAA")
+    Serial_SmithWaterman.main("TGCA", "ATGCCAGT")
 
 def test():
     simulator = Simulator.Simulator()

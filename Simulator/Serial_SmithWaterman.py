@@ -20,13 +20,13 @@ import tabulate
 match    = 2
 mismatch = -1
 gap      = -1
-gap_start      = -2
+gap_start      = -1
 gap_extend      = -1
 seq1     = None
 seq2     = None
 
 
-def main(input_seq1="ATG", input_seq2="TGC"):
+def main(input_seq1="CCCCCC", input_seq2="AAAAAA"):
     #try:
         #parse_cmd_line()
     #except ValueError as err:
@@ -46,6 +46,7 @@ def main(input_seq1="ATG", input_seq2="TGC"):
     # Initialize the scoring matrix.
     score_matrix, start_pos = create_score_matrix(rows, cols)
     print_matrix(score_matrix, start_pos)
+    print_antidiagonals(score_matrix)
 
     # Traceback. Find the optimal path through the scoring matrix. This path
     # corresponds to the optimal local sequence alignment.
@@ -114,6 +115,14 @@ def create_score_matrix(rows, cols):
 
     assert max_pos is not None, 'the x, y position with the highest score was not found'
 
+    print("===== E_Matrix =====")
+    print_matrix(E_matrix, max_pos)
+    print_antidiagonals(E_matrix)
+
+    print("===== F_Matrix =====")
+    print_matrix(F_matrix, max_pos)
+    print_antidiagonals(F_matrix)
+
     return score_matrix, max_pos
 
 
@@ -124,10 +133,10 @@ def calc_score(matrix, E_matrix, F_matrix, x, y):
     similarity = match if seq1[x - 1] == seq2[y - 1] else mismatch
 
     diag_score = matrix[x - 1][y - 1] + similarity
-    up_score   = F_matrix[x-1][y]   #matrix[x - 1][y] + gap
-    left_score = E_matrix[x][y-1]   #matrix[x][y - 1] + gap
+    E_score = E_matrix[x][y]  # matrix[x][y - 1] + gap
+    F_score = F_matrix[x][y]   #matrix[x - 1][y] + gap
 
-    return max(0, diag_score, up_score, left_score)
+    return max(0, diag_score, E_score, F_score)
 
 
 def traceback(score_matrix, start_pos):
@@ -229,6 +238,8 @@ def print_matrix(matrix, max_pos):
     0   2   2   5   4   5
     0   1   4   4   7   6
     '''
+
+    print("\n===== Printing the Matrix row-col wise =====")
     for row in matrix:
         print (row)
         #for col in row:
@@ -236,6 +247,19 @@ def print_matrix(matrix, max_pos):
 
     print("Max score cell index = ",max_pos)
 
+def print_antidiagonals(matrix):
+    rows_num = len(matrix)
+    cols_num = len(matrix[0])
+
+    matrix_antidiagonals = [[] for row in range(rows_num + cols_num - 1)]
+    for row_index in range(1, rows_num):
+        for col_index in range(1, cols_num):
+            matrix_antidiagonals[row_index+col_index].append(matrix[row_index][col_index])
+        #    print('{0:>4}'.format(col))
+
+    print("\n===== Printing Matrix Antidiagonals =====")
+    for ad_index in range(2, len(matrix_antidiagonals)):
+        print(matrix_antidiagonals[ad_index])
 
 class ScoreMatrixTest(unittest.TestCase):
     '''Compare the matrix produced by create_score_matrix() with a known matrix.'''

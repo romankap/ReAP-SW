@@ -64,7 +64,10 @@ def SW_on_ReCAM(input_seqA="ATGCCAGT", input_seqB="TGCA"):
         storage.shiftColumn(seqB_col_index, i, len(seqB)+i-1, 1) # Prepare SeqB for match score
         storage.printArray(header=table_header_row, tablefmt="grid")
 
-        storage.shiftColumn(left_AD, start_row, end_row, 1)
+        if i >= len(seqB):
+            storage.shiftColumn(left_AD, start_row-1, end_row-1, 1)
+        else:
+            storage.shiftColumn(left_AD, start_row, end_row, 1)
         storage.printArray(header=table_header_row, tablefmt="grid")
 
         storage.DNAbpMatch(seqA_col_index, seqB_col_index, temp_col_index, start_row, end_row, DNA_match_score, DNA_mismatch_score)
@@ -99,7 +102,10 @@ def SW_on_ReCAM(input_seqA="ATGCCAGT", input_seqB="TGCA"):
         storage.printArray(header=table_header_row, tablefmt="grid")
 
         #TODO: continue debugging from this row
-        storage.shiftColumn(left_AD, start_row, end_row, 1)
+        if i >= len(seqB):
+            storage.shiftColumn(left_AD, start_row-1, end_row-1, 1)
+        else:
+            storage.shiftColumn(left_AD, start_row, end_row, 1)
         storage.printArray(header=table_header_row, tablefmt="grid")
 
         storage.rowWiseOperation(left_AD, temp_col_index, E_col_index, start_row, end_row, "max")

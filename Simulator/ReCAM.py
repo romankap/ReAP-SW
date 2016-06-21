@@ -15,6 +15,7 @@ sys.path.append(lib_path)
 import FixedPoint
 from tabulate import tabulate
 
+#TODO: Add verbose mode - allow by setting a flag to print array contents after each operation
 class ReCAM:
     def __init__(self, size_Bytes, bytesPerRow=32):
         self.sizeInBytes = size_Bytes

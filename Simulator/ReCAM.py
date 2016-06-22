@@ -27,6 +27,8 @@ class ReCAM:
         self.crossbarArray = [[] for x in range(self.rowsNum)]
         self.crossbarColumns = []
 
+        self.verbose = False
+        self.printHeader = ""
     ### ------------------------------------------------------------ ###
     # Set the width of each column
     def setColumns(self, column_widths):
@@ -43,11 +45,13 @@ class ReCAM:
                 self.crossbarArray[curr_row][self.columnsNumber] = column_data[curr_row - start_row]
 
             self.columnsNumber += 1
-
         else:
             self.crossbarColumns.append(column_width)
             for curr_row in range(start_row, self.rowsNum):
                 self.crossbarArray[curr_row][column_index] = column_data[curr_row - start_row]
+
+        if self.verbose:
+            self.printArray()
 
     ### ------------------------------------------------------------ ###
     # Shift specific column values several rows up or down
@@ -69,6 +73,9 @@ class ReCAM:
         #
         # for j in zero_fill_range:
         #     self.crossbarArray[j][col] = 0
+
+        if self.verbose:
+            self.printArray()
 
         # cycle count
         return 3 * numOfRowsToShift * self.crossbarColumns[col_index]
@@ -94,6 +101,9 @@ class ReCAM:
             print("!!! Unknown Operation !!!")
 
 
+        if self.verbose:
+            self.printArray()
+
         if operation == '-' or operation == '+':
             if res_col != colA:
                 cycles_per_bit = 2**3
@@ -112,17 +122,17 @@ class ReCAM:
         if operation == '+':
             for i in range(start_row, end_row+1):
                 self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] + const_scalar
-
         elif operation == '-':
             for i in range(start_row, end_row+1):
                 self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] - const_scalar
-
         elif operation == max_operation_string:
             for i in range(start_row, end_row + 1):
                 self.crossbarArray[i][res_col] = max(self.crossbarArray[i][colA], const_scalar)
-
         else:
             print("!!! Unknown Operation !!!")
+
+        if self.verbose:
+            self.printArray()
 
         if operation == max_operation_string:
             cycles_per_bit = 2
@@ -135,6 +145,9 @@ class ReCAM:
     def MUL(self, start_row, end_row, colRes, colA, colB):
         for i in range(start_row, end_row):
             self.crossbarArray[i][colRes] = self.crossbarArray[i][colA] * self.crossbarArray[i][colB]
+
+        if self.verbose:
+            self.printArray()
 
         # cycle count
         return (max(self.crossbarColumns[colA], self.crossbarColumns[colA]))**2
@@ -157,6 +170,8 @@ class ReCAM:
         else:
             print("!!! Unknown Operation !!!")
 
+        if self.verbose:
+            self.printArray()
 
         if operation == max_operation_string:
             cycles_per_bit = 2
@@ -167,15 +182,25 @@ class ReCAM:
 
 
     ### ------------------------------------------------------------ ###
+    def setVerbose(self, _verbose):
+        self.verbose = _verbose
+
+    def setPrintHeader(self, header=""):
+        self.printHeader = header
+
     # Print array contents
-    def printArray(self, start_row=0, end_row=-1, start_col=0, end_col=-1, header="", tablefmt="plain"):
+    def printArray(self, start_row=0, end_row=-1, start_col=0, end_col=-1, header="", tablefmt="grid"):
         if end_row == -1: end_row=self.rowsNum
         if end_col == -1: end_col = self.rowsNum
 
         # for row in range(start_row, end_row):
         #     print(self.crossbarArray[row])
+        if header == "":
+            print(tabulate(self.crossbarArray, self.printHeader, tablefmt, stralign="center")) #other format option is "grid"
+        else:
+            print(tabulate(self.crossbarArray, header, tablefmt, stralign="center"))  # other format option is "grid"
 
-        print(tabulate(self.crossbarArray, header, tablefmt, stralign="center")) #other format option is "grid"
+        print("\n")
 
     ### ------------------------------------------------------------ ###
     # Calculate match score

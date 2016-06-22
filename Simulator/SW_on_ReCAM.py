@@ -53,6 +53,9 @@ def SW_on_ReCAM(input_seqA="ATGCCAGT", input_seqB="TGCA"):
     E_col_index = 2; F_col_index = 3; first_AD_col_index = 4; last_AD_col_index = 6; temp_col_index = 7
     total_max_score = 0; total_max_row_index = 0; total_max_col_index = 0
 
+    storage.setVerbose(True)
+    storage.setPrintHeader(table_header_row)
+
     #for i in range (0, len(seqA)+len(seqB)+2):
     for i in range (0, len(seqA)+len(seqB)-1):
         start_row, end_row = getOperatingRows(i, seqA_start_row, len(seqA), len(seqB))
@@ -62,55 +65,31 @@ def SW_on_ReCAM(input_seqA="ATGCCAGT", input_seqB="TGCA"):
         left_AD = ((i-2) % 3) + first_AD_col_index
 
         storage.shiftColumn(seqB_col_index, i, len(seqB)+i-1, 1) # Prepare SeqB for match score
-        storage.printArray(header=table_header_row, tablefmt="grid")
 
         if i >= len(seqB):
             storage.shiftColumn(left_AD, start_row-1, end_row-1, 1)
         else:
             storage.shiftColumn(left_AD, start_row, end_row, 1)
-        storage.printArray(header=table_header_row, tablefmt="grid")
 
         storage.DNAbpMatch(seqA_col_index, seqB_col_index, temp_col_index, start_row, end_row, DNA_match_score, DNA_mismatch_score)
-        storage.printArray(header=table_header_row, tablefmt="grid")
-
         storage.rowWiseOperation(left_AD, temp_col_index, right_AD, start_row, end_row, '+')
-        storage.printArray(header=table_header_row, tablefmt="grid")
-
         storage.rowWiseOperationWithConstant(right_AD, 0, right_AD, start_row, end_row, "max")
-        storage.printArray(header=table_header_row, tablefmt="grid")
 
         if i >= len(seqB):
             storage.rowWiseOperationWithConstant(middle_AD, DNA_gap_first, left_AD, start_row-1, end_row, '+')
         else:
             storage.rowWiseOperationWithConstant(middle_AD, DNA_gap_first, left_AD, start_row, end_row, '+')
-        storage.printArray(header=table_header_row, tablefmt="grid")
 
         storage.rowWiseOperationWithConstant(F_col_index, DNA_gap_extend, temp_col_index, start_row, end_row, '+')
-        storage.printArray(header=table_header_row, tablefmt="grid")
-
         storage.rowWiseOperation(left_AD, temp_col_index, F_col_index, start_row, end_row, "max")
-        storage.printArray(header=table_header_row, tablefmt="grid")
-
         storage.rowWiseOperation(right_AD, F_col_index, right_AD, start_row, end_row, "max")
-        storage.printArray(header=table_header_row, tablefmt="grid")
-
-        #if i >= len(seqB):
-        #    storage.shiftColumn(middle_AD, start_row - 1, end_row-1, 1)
-        #    storage.printArray(header=table_header_row, tablefmt="grid")
-
         storage.rowWiseOperationWithConstant(E_col_index, DNA_gap_extend, temp_col_index, start_row, end_row, '+')
-        storage.printArray(header=table_header_row, tablefmt="grid")
 
-        #TODO: continue debugging from this row
         if i >= len(seqB):
             storage.shiftColumn(left_AD, start_row-1, end_row-1, 1)
         else:
             storage.shiftColumn(left_AD, start_row, end_row, 1)
-        storage.printArray(header=table_header_row, tablefmt="grid")
-
         storage.rowWiseOperation(left_AD, temp_col_index, E_col_index, start_row, end_row, "max")
-        storage.printArray(header=table_header_row, tablefmt="grid")
-
         storage.rowWiseOperation(right_AD, E_col_index, right_AD, start_row, end_row, "max")
 
         (cycles, max_score_in_column, row_of_max_score_in_column) = storage.getScalarFromColumn(right_AD, start_row, end_row, "max")

@@ -23,7 +23,7 @@ def getOperatingRows(i, offset, lenA, lenB):
 
     return start_row+offset, end_row+offset
 
-def SW_on_ReCAM(input_seqA="ATGCCAGT", input_seqB="TGCA"):
+def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
     storage = ReCAM.ReCAM(512)
     print("size in bytes = ", storage.sizeInBytes)
     print("bits per row = ", storage.bitsPerRow)
@@ -95,7 +95,7 @@ def SW_on_ReCAM(input_seqA="ATGCCAGT", input_seqB="TGCA"):
         (cycles, max_score_in_column, row_of_max_score_in_column) = storage.getScalarFromColumn(right_AD, start_row, end_row, "max")
         if max_score_in_column > total_max_score:
             total_max_score = max_score_in_column
-            total_max_row_index = row_of_max_score_in_column-seqA_start_row
+            total_max_row_index = row_of_max_score_in_column-(seqA_start_row-1) #seqA starts from row 1
             total_max_col_index = i-total_max_row_index+2
 
         #time.sleep(1)

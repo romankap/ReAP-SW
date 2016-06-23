@@ -26,7 +26,7 @@ seq1     = None
 seq2     = None
 
 
-def main(input_seq1="CCCCCC", input_seq2="AAAAAA"):
+def main(input_seq2="CCCCCC", input_seq1="AAAAAA"):
     #try:
         #parse_cmd_line()
     #except ValueError as err:

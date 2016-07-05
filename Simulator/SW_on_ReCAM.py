@@ -24,7 +24,7 @@ def getOperatingRows(i, offset, lenA, lenB):
     return start_row+offset, end_row+offset
 
 def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
-    storage = ReCAM.ReCAM(2048)
+    storage = ReCAM.ReCAM(32768)
     print("size in bytes = ", storage.sizeInBytes)
     print("bits per row = ", storage.bitsPerRow)
 
@@ -90,10 +90,10 @@ def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
             total_max_col_index = i-total_max_row_index+2
 
         #time.sleep(1)
-        os.system('cls')
-        print("\n\n\n")
-        print("Max score = ", total_max_score, ", in (row,col)=(", total_max_row_index, ", ", total_max_col_index, ")")
-        print("\n")
+        # os.system('cls')
+        # print("\n\n\n")
+        # print("Max score = ", total_max_score, ", in (row,col)=(", total_max_row_index, ", ", total_max_col_index, ")")
+        # print("\n")
         #storage.printArray(header=table_header_row, tablefmt="grid")
 
     return (total_max_score, total_max_row_index, total_max_col_index)

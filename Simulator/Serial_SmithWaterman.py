@@ -45,8 +45,8 @@ def main(input_seqA="CCCCCC", input_seqB="AAAAAA"):
 
     # Initialize the scoring matrix.
     score_matrix, start_pos = create_score_matrix(rows, cols)
-    print_matrix(score_matrix, start_pos)
-    print_antidiagonals(score_matrix)
+    #print_matrix(score_matrix, start_pos)
+    #print_antidiagonals(score_matrix)
 
     return (score_matrix[start_pos[0]][start_pos[1]], start_pos[0], start_pos[1])
 
@@ -117,13 +117,13 @@ def create_score_matrix(rows, cols):
 
     assert max_pos is not None, 'the x, y position with the highest score was not found'
 
-    print("===== E_Matrix =====")
-    print_matrix(E_matrix, max_pos)
-    print_antidiagonals(E_matrix)
-
-    print("===== F_Matrix =====")
-    print_matrix(F_matrix, max_pos)
-    print_antidiagonals(F_matrix)
+    # print("===== E_Matrix =====")
+    # print_matrix(E_matrix, max_pos)
+    # print_antidiagonals(E_matrix)
+    #
+    # print("===== F_Matrix =====")
+    # print_matrix(F_matrix, max_pos)
+    # print_antidiagonals(F_matrix)
 
     return score_matrix, max_pos
 

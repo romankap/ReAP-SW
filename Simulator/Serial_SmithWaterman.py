@@ -26,17 +26,17 @@ seq1     = None
 seq2     = None
 
 
-def main(input_seq2="CCCCCC", input_seq1="AAAAAA"):
+def main(input_seqA="CCCCCC", input_seqB="AAAAAA"):
     #try:
         #parse_cmd_line()
     #except ValueError as err:
     #    print('error:', err)
     #    return
     global seq1
-    seq1 = input_seq1
+    seq1 = input_seqA
 
     global seq2
-    seq2 = input_seq2
+    seq2 = input_seqB
 
     # The scoring matrix contains an extra row and column for the gap (-), hence
     # the +1 here.
@@ -47,6 +47,8 @@ def main(input_seq2="CCCCCC", input_seq1="AAAAAA"):
     score_matrix, start_pos = create_score_matrix(rows, cols)
     print_matrix(score_matrix, start_pos)
     print_antidiagonals(score_matrix)
+
+    return (score_matrix[start_pos[0]][start_pos[1]], start_pos[0], start_pos[1])
 
     # Traceback. Find the optimal path through the scoring matrix. This path
     # corresponds to the optimal local sequence alignment.
@@ -109,7 +111,7 @@ def create_score_matrix(rows, cols):
             score = calc_score(score_matrix, E_matrix, F_matrix, i, j)
             if score > max_score:
                 max_score = score
-                max_pos   = (i, j)
+                max_pos = (i, j)
 
             score_matrix[i][j] = score
 

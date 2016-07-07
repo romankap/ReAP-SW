@@ -99,7 +99,9 @@ def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
         #storage.printArray(header=table_header_row, tablefmt="grid")
 
     print("=== ReCAM Cycles executed: ", storage.getCyclesCounter())
-    print("=== Performance (CUPs): ", len(seqA)*len(seqB) * storage.getFrequency()//storage.getCyclesCounter())
+    print("* SeqA length = ", len(seqA), " seqB length = ", len(seqB))
+    print("** Cycles: ", storage.getCyclesCounter())
+    print("*** Performance (CUPs): ", len(seqA)*len(seqB) * storage.getFrequency()//storage.getCyclesCounter())
     return (total_max_score, total_max_row_index, total_max_col_index)
 
 #SW_on_ReCAM()

@@ -25,8 +25,10 @@ def getOperatingRows(i, offset, lenA, lenB):
 
 def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
     storage = ReCAM.ReCAM(32768)
-    print("size in bytes = ", storage.sizeInBytes)
-    print("bits per row = ", storage.bitsPerRow)
+    verbose_prints = False
+    if verbose_prints:
+        print("size in bytes = ", storage.sizeInBytes)
+        print("bits per row = ", storage.bitsPerRow)
 
     seqA = list(input_seqA)
     seqB = list(input_seqB)
@@ -53,7 +55,7 @@ def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
     E_col_index = 2; F_col_index = 3; first_AD_col_index = 4; last_AD_col_index = 6; temp_col_index = 7
     total_max_score = 0; total_max_row_index = 0; total_max_col_index = 0
 
-    ##storage.setVerbose(True)
+    storage.setVerbose(verbose_prints)
     storage.setPrintHeader(table_header_row)
 
     #for i in range (0, len(seqA)+len(seqB)+2):
@@ -96,6 +98,8 @@ def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
         # print("\n")
         #storage.printArray(header=table_header_row, tablefmt="grid")
 
+    print("=== ReCAM Cycles executed: ", storage.getCyclesCounter())
+    print("=== Performance (CUPs): ", len(seqA)*len(seqB) * storage.getFrequency()//storage.getCyclesCounter())
     return (total_max_score, total_max_row_index, total_max_col_index)
 
 #SW_on_ReCAM()

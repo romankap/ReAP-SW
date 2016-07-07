@@ -29,6 +29,29 @@ class ReCAM:
 
         self.verbose = False
         self.printHeader = ""
+
+        ### ----- for Simulation Purposes--------- ###
+        self.cycleCounter = 0
+        self.frequency = 500 * 10**6
+
+    ### ------------------------------------------------------------ ###
+    ### ------ Cycle Counter ------- ###
+
+    def resetCycleCouter(self):
+        self.cycleCounter = 0
+
+    def advanceCycleCouter(self, cycles_executed):
+        self.cycleCounter += cycles_executed
+
+    def getCyclesCounter(self):
+        return self.cycleCounter
+
+    def setFrequency(self, _freq):
+        self.frequency = _freq
+
+    def getFrequency(self):
+        return self.frequency
+
     ### ------------------------------------------------------------ ###
     # Set the width of each column
     def setColumns(self, column_widths):
@@ -78,8 +101,8 @@ class ReCAM:
             self.printArray()
 
         # cycle count
-        return 3 * numOfRowsToShift * self.crossbarColumns[col_index]
-
+        cycles_executed = 3 * numOfRowsToShift * self.crossbarColumns[col_index]
+        self.advanceCycleCouter(cycles_executed)
 
     ### ------------------------------------------------------------ ###
     # Simple arithmetic - Add / Subtract
@@ -112,7 +135,8 @@ class ReCAM:
         elif operation == max_operation_string:
             cycles_per_bit = 2
 
-        return cycles_per_bit * max(self.crossbarColumns[colA],self.crossbarColumns[colB])
+        cycles_executed = cycles_per_bit * max(self.crossbarColumns[colA],self.crossbarColumns[colB])
+        self.advanceCycleCouter(cycles_executed)
 
     ### ------------------------------------------------------------ ###
     # Simple variable-constant arithmetic  - Add / Subtract
@@ -138,7 +162,9 @@ class ReCAM:
             cycles_per_bit = 2
         else:
             cycles_per_bit = 2 ** 2
-        return cycles_per_bit * self.crossbarColumns[colA]
+
+        cycles_executed = cycles_per_bit * self.crossbarColumns[colA]
+        self.advanceCycleCouter(cycles_executed)
 
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
@@ -150,7 +176,8 @@ class ReCAM:
             self.printArray()
 
         # cycle count
-        return (max(self.crossbarColumns[colA], self.crossbarColumns[colA]))**2
+        cycles_executed = (max(self.crossbarColumns[colA], self.crossbarColumns[colA]))**2
+        self.advanceCycleCouter(cycles_executed)
 
     ### ------------------------------------------------------------ ###
     # Simple variable-constant arithmetic  - Add / Subtract
@@ -175,11 +202,13 @@ class ReCAM:
 
         if operation == max_operation_string:
             cycles_per_bit = 2
-            return cycles_per_bit * self.crossbarColumns[col_index], result, result_row_index
+            cycles_executed = cycles_per_bit * self.crossbarColumns[col_index]
         else:
             cycles_per_bit = 2 ** 2
-            return cycles_per_bit * self.crossbarColumns[col_index] * math.ceil( math.log( len(self.crossbarColumns[col_index])))
+            cycles_executed = cycles_per_bit * self.crossbarColumns[col_index] * math.ceil( math.log( len(self.crossbarColumns[col_index])))
 
+        self.advanceCycleCouter(cycles_executed)
+        return cycles_executed, result, result_row_index
 
     ### ------------------------------------------------------------ ###
     def setVerbose(self, _verbose):
@@ -209,7 +238,8 @@ class ReCAM:
             is_bp_match = (self.crossbarArray[curr_row][colA] == self.crossbarArray[curr_row][colB])
             self.crossbarArray[curr_row][res_col] = bp_match_score if is_bp_match else bp_mismatch_score
 
-        return 2 + 4*(max(self.crossbarColumns[colA], self.crossbarColumns[colA]))
+        cycles_executed = 2 + 4*(max(self.crossbarColumns[colA], self.crossbarColumns[colA]))
+        self.advanceCycleCouter(cycles_executed)
 
     '''
     You have only 4 equal combinations (0/0, 1/1, 2/2 and 3/3). The rest are mismatch.

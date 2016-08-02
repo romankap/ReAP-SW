@@ -12,6 +12,9 @@ import swalign'''
 Every layer has number of neurons - the net will be presented as a list.
 First (last) layer is input (output) layer.
 '''
+
+
+
 def createFullyConnectNN():
     network_structure = [3,5,1]
     print("Create FC networks")

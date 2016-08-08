@@ -1,10 +1,10 @@
 import os,sys, time
 
 import ReCAM, Simulator
-
-'''lib_path = os.path.abspath(os.path.join('swalign-0.3.3'))
+lib_path = os.path.abspath(os.path.join('spfpm-1.1'))
 sys.path.append(lib_path)
-import swalign'''
+import FixedPoint
+
 
 DNA_match_score = 2; DNA_mismatch_score = -1; DNA_gap_first = -1; DNA_gap_extend = -1
 

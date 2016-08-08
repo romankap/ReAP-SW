@@ -168,9 +168,22 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
-    def MUL(self, start_row, end_row, colRes, colA, colB):
+    def MULConsecutiveRows(self, start_row, end_row, colRes, colA, colB):
         for i in range(start_row, end_row):
             self.crossbarArray[i][colRes] = self.crossbarArray[i][colA] * self.crossbarArray[i][colB]
+
+        if self.verbose:
+            self.printArray()
+
+        # cycle count
+        cycles_executed = (max(self.crossbarColumns[colA], self.crossbarColumns[colA]))**2
+        self.advanceCycleCouter(cycles_executed)
+
+    ### ------------------------------------------------------------ ###
+    # Fixed-point multiplication
+    def MULTaggedRows(self, tagged_rows_list, colRes, colA, colB):
+        for row_num in tagged_rows_list:
+            self.crossbarArray[row_num][colRes] = self.crossbarArray[row_num][colA] * self.crossbarArray[row_num][colB]
 
         if self.verbose:
             self.printArray()

@@ -2,8 +2,10 @@
 # Demonstration of Simple Python Fixed-Point Module
 # (C)Copyright 2006-2014, RW Penney
 
-import time
+import os, sys, time
 try:
+    lib_path = os.path.abspath('//anaconda3/lib/site-packages')
+    sys.path.append(lib_path)
     import matplotlib, numpy
     matplotlib.use('qt4agg')
     import matplotlib.pyplot as plt
@@ -11,22 +13,48 @@ try:
 except ImportError:
     HAVE_MATPLOTLIB = False
 
+lib_path = os.path.abspath(os.path.join('spfpm-1.1'))
+sys.path.append(lib_path)
 import FixedPoint
 
+
+def print_FXnum_parameters(fx_num):
+    print('resolution: ' + str(fx_num.family.resolution))
+    print('scale: ' + str(fx_num.family.scale))
+    print('round_up: ' + str(fx_num.family._roundup))
+    print('integer bits: ' + str(fx_num.family.integer_bits))
+    print('fraction bits: ' + str(fx_num.family.fraction_bits))
 
 def basicDemo():
     """Basic demonstration of roots & exponents at various accuracies"""
 
-    for resolution in [8, 32, 80, 274]:
-        family = FixedPoint.FXfamily(resolution)
-        val = 2
+    #for resolution in [8, 32, 80, 274]:
+    for resolution in [8, 16]:
+        print('=== {0} bits === NEGATIVE POWER'.format(resolution))
 
-        print('=== {0} bits ==='.format(resolution))
-        rt = FixedPoint.FXnum(val, family).sqrt()
-        print('sqrt(' + str(val) + ')~ ' + str(rt))
-        print('sqrt(' + str(val) + ')^2 ~ ' + str(rt * rt))
-        print('exp(1) ~ ' + str(family.exp1))
-        print()
+        for bits in range(1, resolution+3):
+            family = FixedPoint.FXfamily(4, resolution-4)
+            num = FixedPoint.FXnum(2 ** -bits, family)
+
+            print_FXnum_parameters(num)
+            print('2^-{0}= '.format(bits) + str(num))
+            print('Scaled 2^-{0}= '.format(bits) + str(num.scaledval))
+            print()
+
+        print('=== {0} bits === POSITIVE POWER'.format(resolution))
+        for bits in range(1,resolution + 3):
+            family = FixedPoint.FXfamily(resolution)
+            num = FixedPoint.FXnum(2 ** bits, family)
+
+            print_FXnum_parameters(num)
+            print('2^{0} = '.format(bits) + str(num))
+
+            print()
+
+        # print('sqrt(' + str(val) + ')~ ' + str(rt))
+        # print('sqrt(' + str(val) + ')^2 ~ ' + str(rt * rt))
+        # print('exp(1) ~ ' + str(family.exp1))
+
 
 
 def overflowDemo():
@@ -91,9 +119,9 @@ def plotDemo():
 
 if __name__ == "__main__":
     basicDemo()
-    overflowDemo()
-    speedDemo()
-    if HAVE_MATPLOTLIB:
-        plotDemo()
+    # overflowDemo()
+    # speedDemo()
+    # if HAVE_MATPLOTLIB:
+    #     plotDemo()
 
 # vim: set ts=4 sw=4 et:

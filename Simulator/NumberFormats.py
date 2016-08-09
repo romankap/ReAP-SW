@@ -80,7 +80,7 @@ def test():
 
     print()
     print("overflow test")
-    overflow_test_num = FixedPointNumber(9999999, num_format)
+    overflow_test_num = FixedPointNumber(999999, num_format)
     print("overflow_test_num.val =", overflow_test_num.val)
 
     print("negative overflow test")

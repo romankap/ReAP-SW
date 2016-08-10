@@ -54,10 +54,6 @@ class FixedPointNumber:
         return other * self
 
 
-#    def __add__(self, other):
-
-
-
 def test():
     num_format = FixedPointFormat(8,4)
     test_num_a = FixedPointNumber(3.12, num_format)

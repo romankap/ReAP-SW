@@ -1,6 +1,5 @@
 import os, sys, time
 
-import ReCAM, Simulator
 import NumberFormats
 
 '''lib_path = os.path.abspath(os.path.join('swalign-0.3.3'))
@@ -19,19 +18,22 @@ class NeuralNetwork:
         self.layers.append(("input", 10))
 
     def addLayer(self, type, num_of_neurons):
+        prev_layer_neurons = self.layers[len(self.layers)-1][1]
+
         self.layers.append((type, num_of_neurons))
 
 def initializeWeights():
     print("Insert weight values to ReCAM. Weights should be stored in a specific format (float / fixed-point).")
 
 
-def createFullyConnectNN():
-    network_structure = [3,5,1]
-    print("Create FC networks")
 
-def feedFrowardNN(input):
-    print("Feed forward")
 
-def trainOnSingleInput(input):
-    print("FW + BW in NN")
+def test():
+    nn = NeuralNetwork(5)
+    print("input layer size =", nn.layers[0])
 
+    nn.addLayer("FC", 10)
+
+    print("Added FC layer")
+
+test()

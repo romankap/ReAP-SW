@@ -8,14 +8,14 @@ try:
 except ImportError:
     HAVE_MATPLOTLIB = False
 
-import os,sys
 import math
+import os
+import sys
+
 lib_path = os.path.abspath(os.path.join('spfpm-1.1'))
 sys.path.append(lib_path)
-import FixedPoint
 from tabulate import tabulate
 
-#TODO: Add verbose mode - allow by setting a flag to print array contents after each operation
 class ReCAM:
     def __init__(self, size_Bytes, bytesPerRow=32):
         self.sizeInBytes = size_Bytes
@@ -58,7 +58,7 @@ class ReCAM:
         self.crossbarColumns = column_widths
 
     ### ------------------------------------------------------------ ###
-    def loadData(self, column_width, column_data, start_row, column_index=-1):
+    def loadData(self, column_data, start_row, column_width, column_index=-1):
         if column_index == -1 or column_index+1 > self.columnsNumber:
             self.crossbarColumns.append(column_width)
             for i in range(0, self.rowsNum):
@@ -69,8 +69,8 @@ class ReCAM:
 
             self.columnsNumber += 1
         else:
-            self.crossbarColumns.append(column_width)
-            for curr_row in range(start_row, self.rowsNum):
+            #self.crossbarColumns.append(column_width)
+            for curr_row in range(start_row, start_row + min(self.rowsNum, len(column_data))):
                 self.crossbarArray[curr_row][column_index] = column_data[curr_row - start_row]
 
         if self.verbose:

@@ -6,6 +6,7 @@ class FixedPointFormat:
     def __init__(self, integer_bits, fraction_bits):
         self.integer_bits = integer_bits
         self.fraction_bits = fraction_bits
+        self.total_bits = integer_bits + fraction_bits
 
         self.rounding = 1 << fraction_bits
         self.max = (1 << (integer_bits - 1)) - 1/self.rounding  # 1 bit saved for sign
@@ -15,6 +16,15 @@ class FixedPointFormat:
 
     def cycles_per_MUL(self):
         return (self.integer_bits + self.fraction_bits) ** 2
+
+    def convert(self, value):
+        res = int(value * self.rounding) / self.rounding
+        if res > self.max:
+            res = self.max
+        elif res < -self.max:
+            res = -self.max
+        return res
+
 
 class FixedPointNumber:
     def __init__(self, value, rep_format):
@@ -84,4 +94,4 @@ def test():
     print("overflow_test_num.val =", overflow_test_num.val)
 
 
-test()
+#test()

@@ -2,9 +2,12 @@
 # Unit-tests for simple fixed-point Python module
 # RW Penney, January 2006
 
-import math, sys, unittest
+import math
+import sys
+import unittest
+
 sys.path.insert(0, '..')
-from FixedPoint import FXfamily, FXnum, \
+from NumberFormats.FixedPoint import FXfamily, FXnum, \
         FXoverflowError, FXdomainError, FXfamilyError
 
 

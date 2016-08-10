@@ -1,6 +1,6 @@
 import os, sys, time
-
-import NumberFormats
+import random
+from NumberFormats import FixedPoint
 
 '''lib_path = os.path.abspath(os.path.join('swalign-0.3.3'))
 sys.path.append(lib_path)
@@ -13,27 +13,65 @@ First (last) layer is input (output) layer.
 '''
 
 class NeuralNetwork:
-    def __init__(self, input_layer = 10):
+    def __init__(self, number_format, inputs = 10):
+        random.seed()
+        self.numbersFormat = number_format
+        self.weightsMax = number_format.max
         self.layers = []
-        self.layers.append(("input", 10))
+        self.layers.append(("input", inputs+1)) # +1 due to bias
 
-    def addLayer(self, type, num_of_neurons):
+        self.weightsMatrices = []
+        self.weightsMatrices.append(None)
+
+
+    def addLayer(self, type, new_layer_neurons):
         prev_layer_neurons = self.layers[len(self.layers)-1][1]
+        new_layer_neurons_with_bias = new_layer_neurons
 
-        self.layers.append((type, num_of_neurons))
+        self.weightsMatrices.append([[] for x in range(new_layer_neurons_with_bias)]) #append new layer weights
 
-def initializeWeights():
-    print("Insert weight values to ReCAM. Weights should be stored in a specific format (float / fixed-point).")
+        self.layers.append((type, new_layer_neurons_with_bias))
+
+        if type == "FC":
+            self.addFCLayer(prev_layer_neurons, new_layer_neurons_with_bias, len(self.layers)-1) # +1 for bias
+        elif type == "output":
+            self.addFCLayer(prev_layer_neurons, new_layer_neurons, len(self.layers)-1)
+        else:
+            print("Unknown layer type")
+
+    ###############################################################
+    ####    Initialize all weights for a FC layer               ###
+    ###############################################################
+    def addFCLayer(self, prev_later_neurons, new_layer_neurons, new_layer_index):
+        for i in range(new_layer_neurons):
+            for j in range(prev_later_neurons):
+                self.weightsMatrices[new_layer_index][i].append(self.numbersFormat.convert(getRandomWeight(self.weightsMax)))
 
 
+    def convert_all_results_to_format(self, layer_index):
+        num_of_neurons = len(self.weightsMatrices[layer_index])
+        weights_per_neuron = len(self.weightsMatrices[layer_index][0])
+
+        for i in range(num_of_neurons):
+            for j in range(weights_per_neuron):
+                self.weightsMatrices[layer_index][i][j] = self.numbersFormat.convert(self.weightsMatrices[layer_index][i][j])
+
+
+
+def getRandomWeight(max):
+    return random.uniform(0.00001, max)
 
 
 def test():
-    nn = NeuralNetwork(5)
+    fixed_point_8bit = FixedPoint.FixedPointFormat(8,8)
+    nn = NeuralNetwork(fixed_point_8bit, 5)
     print("input layer size =", nn.layers[0])
 
-    nn.addLayer("FC", 10)
+    nn.addLayer("FC", 3)
+    print("Added FC layer, size =", nn.layers[1])
 
-    print("Added FC layer")
+    nn.addLayer("output", 2)
+    print("output layer size =", nn.layers[2])
 
-test()
+
+#test()

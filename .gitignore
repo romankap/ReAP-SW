@@ -226,3 +226,4 @@ pip-log.txt
 *.idea
 Simulator/.idea
 Simulator/.idea/*
+*/__pycache__/*

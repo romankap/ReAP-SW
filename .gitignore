@@ -228,3 +228,5 @@ pip-log.txt
 Simulator/.idea
 Simulator/.idea/*
 */__pycache__/*
+*.iml
+*.xml

@@ -189,9 +189,13 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
-    def MULConsecutiveRows(self, start_row, end_row, colRes, colA, colB):
-        for i in range(start_row, end_row):
-            self.crossbarArray[i][colRes] = self.crossbarArray[i][colA] * self.crossbarArray[i][colB]
+    def MULConsecutiveRows(self, start_row, end_row, colRes, colA, colB, numbersFormat=None):
+        for i in range(start_row, end_row+1):
+            if not numbersFormat:
+                self.crossbarArray[i][colRes] = self.crossbarArray[i][colA] * self.crossbarArray[i][colB]
+            else:
+                self.crossbarArray[i][colRes] = numbersFormat.convert(self.crossbarArray[i][colA] *
+                                                                     self.crossbarArray[i][colB])
 
         if self.verbose:
             self.printArray()
@@ -202,9 +206,13 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
-    def MULTaggedRows(self, tagged_rows_list, colRes, colA, colB):
+    def MULTaggedRows(self, tagged_rows_list, colRes, colA, colB, numbersFormat=None):
         for row_num in tagged_rows_list:
-            self.crossbarArray[row_num][colRes] = self.crossbarArray[row_num][colA] * self.crossbarArray[row_num][colB]
+            if not numbersFormat:
+                self.crossbarArray[row_num][colRes] = self.crossbarArray[row_num][colA] * self.crossbarArray[row_num][colB]
+            else:
+                self.crossbarArray[row_num][colRes] = numbersFormat.convert(self.crossbarArray[row_num][colA] *
+                                                                            self.crossbarArray[row_num][colB])
 
         if self.verbose:
             self.printArray()

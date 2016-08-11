@@ -224,3 +224,5 @@ pip-log.txt
 .idea/*
 *.pyc
 *.idea
+Simulator/.idea
+Simulator/.idea/*

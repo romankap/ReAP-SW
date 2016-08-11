@@ -55,7 +55,7 @@ def loadInputToStorage(storage, input_format, input_size, column_index, start_ro
 
     if generate_random_input:
         for i in range(input_size):
-            input_vector.append(input_format.convert(random.uniform(0.0001, input_format.max)))
+            input_vector.append(input_format.convert(random.uniform(0.0001, 1)))
         #bias
         input_vector.append(1)
     else:
@@ -85,23 +85,31 @@ def broadcastData(storage, data_col_index, data_start_row_index, data_length,
 def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, input_start_row):
     number_of_layers = len(nn.layers)
 
+
     storage.printArray()
     # 1) Broadcast
     input_layer_size = nn.layers[0][1]
 
     #Load bias
-    storage.loadData([1], input_start_row + input_layer_size, nn.numbersFormat.total_bits, input_column)
+    bias = [1]
+    storage.loadData(bias, input_start_row + input_layer_size, nn.numbersFormat.total_bits, input_column)
     input_layer_size +=1
 
-    hidden_layer_size = nn.layers[1][1]
-    hidden_layer_start_row = nn_start_row + input_layer_size
+    hidden_layer_neurons = nn.layers[1][1]
+    broadcast_start_row = nn_start_row + input_layer_size
     broadcastData(storage, input_column, input_start_row, input_layer_size,
-                  hidden_layer_start_row, input_column, input_layer_size, hidden_layer_size-1) #first appearance of input is already aligned to appropriate weights
+                  broadcast_start_row, input_column, input_layer_size, hidden_layer_neurons-1) #first appearance of input is already aligned to appropriate weights
 
     storage.printArray()
 
     # 2) MUL
-    print("MUL all layer weights with input")
+    hidden_layer_start_row = nn_start_row
+    MAC_result_col = 2
+    hidden_layer_total_weights = len(nn.weightsMatrices[1]) * len(nn.weightsMatrices[1][0])
+    zero_vector = [0] * hidden_layer_total_weights
+    storage.loadData(zero_vector, nn_start_row, nn.numbersFormat.total_bits, MAC_result_col)
+
+    storage.MULConsecutiveRows(nn_start_row, nn_start_row + hidden_layer_total_weights-1, MAC_result_col, nn_weights_column, input_column, nn.numbersFormat)
 
     # 3) ACC
 

@@ -1,10 +1,10 @@
-import os,sys, time
+import os
+import sys
 
-import ReCAM, Simulator
+import ReCAM
+
 lib_path = os.path.abspath(os.path.join('spfpm-1.1'))
 sys.path.append(lib_path)
-import FixedPoint
-
 
 DNA_match_score = 2; DNA_mismatch_score = -1; DNA_gap_first = -1; DNA_gap_extend = -1
 
@@ -43,11 +43,11 @@ def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
 
     #Initialization
     seqA_col_index = 0; seqB_col_index = 1
-    storage.loadData(2, seqA, seqA_start_row)
-    storage.loadData(2, rev_seqB, 0, seqB_col_index)
+    storage.loadData(seqA, seqA_start_row, 2)
+    storage.loadData(rev_seqB, 0, seqB_col_index, 2)
 
     for i in range(6):
-        storage.loadData(32, zero_vector, 0)
+        storage.loadData(zero_vector, 0, 32)
     table_header_row = ["seqA", "seqB", "E[]", "F[]", "AD[0]", "AD[1]", "AD[2]", "temp[]"]
 
 

@@ -3,7 +3,8 @@
 # RW Penney, January 2007
 
 from distutils.core import setup
-from FixedPoint import SPFPM_VERSION
+
+from NumberFormats.FixedPoint import SPFPM_VERSION
 
 setup(
     author = 'RW Penney',

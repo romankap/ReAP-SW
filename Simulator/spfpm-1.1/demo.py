@@ -2,7 +2,10 @@
 # Demonstration of Simple Python Fixed-Point Module
 # (C)Copyright 2006-2014, RW Penney
 
-import os, sys, time
+import os
+import sys
+import time
+
 try:
     lib_path = os.path.abspath('//anaconda3/lib/site-packages')
     sys.path.append(lib_path)
@@ -15,7 +18,7 @@ except ImportError:
 
 lib_path = os.path.abspath(os.path.join('spfpm-1.1'))
 sys.path.append(lib_path)
-import FixedPoint
+from NumberFormats import FixedPoint
 
 
 def print_FXnum_parameters(fx_num):
@@ -33,7 +36,7 @@ def basicDemo():
         print('=== {0} bits === NEGATIVE POWER'.format(resolution))
 
         for bits in range(1, resolution+3):
-            family = FixedPoint.FXfamily(4, resolution-4)
+            family = FixedPoint.FXfamily(4, resolution - 4)
             num = FixedPoint.FXnum(2 ** -bits, family)
 
             print_FXnum_parameters(num)

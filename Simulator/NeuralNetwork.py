@@ -18,24 +18,20 @@ class NeuralNetwork:
         self.numbersFormat = number_format
         self.weightsMax = number_format.max
         self.layers = []
-        self.layers.append(("input", inputs+1)) # +1 due to bias
+        self.layers.append(("input", inputs)) # +1 due to bias
 
         self.weightsMatrices = []
         self.weightsMatrices.append(None)
 
 
     def addLayer(self, type, new_layer_neurons):
-        prev_layer_neurons = self.layers[len(self.layers)-1][1]
-        new_layer_neurons_with_bias = new_layer_neurons
+        weights_per_neuron = self.layers[len(self.layers)-1][1] + 1 # +1 due to bias
 
-        self.weightsMatrices.append([[] for x in range(new_layer_neurons_with_bias)]) #append new layer weights
+        self.weightsMatrices.append([[] for x in range(new_layer_neurons)]) #append new layer weights
+        self.layers.append((type, new_layer_neurons))
 
-        self.layers.append((type, new_layer_neurons_with_bias))
-
-        if type == "FC":
-            self.addFCLayer(prev_layer_neurons, new_layer_neurons_with_bias, len(self.layers)-1) # +1 for bias
-        elif type == "output":
-            self.addFCLayer(prev_layer_neurons, new_layer_neurons, len(self.layers)-1)
+        if type == "FC" or type == "output":
+            self.addFCLayer(weights_per_neuron, new_layer_neurons, len(self.layers)-1)
         else:
             print("Unknown layer type")
 

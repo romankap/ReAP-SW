@@ -39,9 +39,11 @@ class NeuralNetwork:
     ####    Initialize all weights for a FC layer               ###
     ###############################################################
     def addFCLayer(self, prev_later_neurons, new_layer_neurons, new_layer_index):
+        max_random_weight = 1
+
         for i in range(new_layer_neurons):
             for j in range(prev_later_neurons):
-                self.weightsMatrices[new_layer_index][i].append(self.numbersFormat.convert(getRandomWeight(self.weightsMax)))
+                self.weightsMatrices[new_layer_index][i].append(self.numbersFormat.convert(getRandomWeight(max_random_weight)))
 
 
     def convert_all_results_to_format(self, layer_index):

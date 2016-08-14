@@ -159,7 +159,7 @@ def test():
     storage = ReCAM.ReCAM(1024)
     #storage.setVerbose(True)
 
-    table_header_row = ["NN", "input"]
+    table_header_row = ["NN", "input", "MUL", "ACC"]
     storage.setPrintHeader(table_header_row)
 
     nn_input_size = 3 # actual input length will be +1 due to bias

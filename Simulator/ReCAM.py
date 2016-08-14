@@ -58,6 +58,12 @@ class ReCAM:
         self.crossbarColumns = column_widths
 
     ### ------------------------------------------------------------ ###
+    # Set the width of each column
+    def tagRows(self, col_index):
+        cycles_executed = self.crossbarColumns[col_index]
+        self.advanceCycleCouter(cycles_executed)
+
+    ### ------------------------------------------------------------ ###
     def loadData(self, column_data, start_row, column_width, column_index=-1):
         if column_index == -1 or column_index+1 > self.columnsNumber:
             self.crossbarColumns.append(column_width)
@@ -74,7 +80,8 @@ class ReCAM:
                 self.crossbarArray[curr_row][column_index] = column_data[curr_row - start_row]
 
         if self.verbose:
-            self.printArray()
+            operation_to_print = "load data in column " + column_index
+            self.printArray(operation=operation_to_print)
 
     ### ------------------------------------------------------------ ###
     # Shift specific column values several rows up or down
@@ -98,31 +105,73 @@ class ReCAM:
         #     self.crossbarArray[j][col] = 0
 
         if self.verbose:
+            operation_to_print = "shift column " + col_index + " from row "
+            if numOfRowsToShift > 0:
+                operation_to_print = operation_to_print + end_row + " to row " + start_row
+            else:
+                operation_to_print = operation_to_print + start_row + " to row " + end_row
+
+            self.printArray(operation=operation_to_print)
+
+        # cycle count
+        cycles_executed = 3 * self.crossbarColumns[col_index]
+        self.advanceCycleCouter(cycles_executed)
+
+    #####################################################################
+    #####   Shift specific column values several rows up or down
+    #####################################################################
+    def shiftColumnOnTaggedRows(self, col_index, tagged_rows_list, direction_of_shift=1):
+        # directions_of_shift determines whether to shift up or down
+
+        for i in tagged_rows_list:
+            self.crossbarArray[i+direction_of_shift][col_index] = self.crossbarArray[i][col_index]
+
+        if self.verbose:
+            operation_to_print = "shift tagged rows in column " + col_index + " direction: " + direction_of_shift
+            self.printArray(operation=operation_to_print)
+
+        # cycle count
+        cycles_executed = 3 * self.crossbarColumns[col_index]
+        self.advanceCycleCouter(cycles_executed)
+
+
+    #####################################################################
+    ######      Broadcast a single element to multiple ReCAM rows
+    #####################################################################
+    def broadcastDataElement(self, data_col_index, data_row_index,
+                      destination_start_row, destination_col_index, destination_delta, total_destination_rows):
+        data_to_broadcast = self.crossbarArray[data_row_index][data_col_index]
+
+        for i in range(total_destination_rows):
+            target_row = destination_start_row + i*destination_delta
+
+            self.crossbarArray[target_row][destination_col_index] = data_to_broadcast
+
+        if self.verbose:
             self.printArray()
 
         # cycle count
-        cycles_executed = 3 * numOfRowsToShift * self.crossbarColumns[col_index]
+        cycles_executed = 1 + self.crossbarColumns[data_col_index]
         self.advanceCycleCouter(cycles_executed)
 
-    ### ------------------------------------------------------------ ###
-    # Simple arithmetic - Add / Subtract
+
+    #####################################################################
+    ######      Simple arithmetic - Add, Subtract, Max
+    #####################################################################
     def rowWiseOperation(self, colA, colB, res_col, start_row, end_row, operation):
         max_operation_string = "max"
 
         if operation == '+':
             for i in range(start_row,end_row+1):
                 self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] + self.crossbarArray[i][colB]
-
         elif operation == '-':
             for i in range(start_row, end_row+1):
                 self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] - self.crossbarArray[i][colB]
-
         elif operation == max_operation_string:
             for i in range(start_row, end_row + 1):
                 self.crossbarArray[i][res_col] = max(self.crossbarArray[i][colA], self.crossbarArray[i][colB])
         else:
             print("!!! Unknown Operation !!!")
-
 
         if self.verbose:
             self.printArray()
@@ -136,6 +185,47 @@ class ReCAM:
             cycles_per_bit = 2
 
         cycles_executed = cycles_per_bit * max(self.crossbarColumns[colA],self.crossbarColumns[colB])
+        self.advanceCycleCouter(cycles_executed)
+
+
+    ### ------------------------------------------------------------ ###
+    # Simple arithmetic - Add, Subtract, Max
+    def taggedRowWiseOperation(self, colA, colB, res_col, tagged_rows_list, operation, number_format=None):
+        max_operation_string = "max"
+
+        if operation == '+':
+            for i in tagged_rows_list:
+                if number_format:
+                    self.crossbarArray[i][res_col] = number_format.convert(self.crossbarArray[i][colA] + self.crossbarArray[i][colB])
+                else:
+                    self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] + self.crossbarArray[i][colB]
+
+        elif operation == '-':
+            for i in tagged_rows_list:
+                if number_format:
+                    self.crossbarArray[i][res_col] = number_format.convert(self.crossbarArray[i][colA] - self.crossbarArray[i][colB])
+                else:
+                    self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] - self.crossbarArray[i][colB]
+
+        elif operation == max_operation_string:
+            for i in tagged_rows_list:
+                self.crossbarArray[i][res_col] = max(self.crossbarArray[i][colA], self.crossbarArray[i][colB])
+        else:
+            print("!!! Unknown Operation !!!")
+
+        if self.verbose:
+            operation_to_print = "taggedRowWiseOperation() with operation = " + operation
+            self.printArray(operation = operation_to_print)
+
+        if operation == '-' or operation == '+':
+            if res_col != colA:
+                cycles_per_bit = 2 ** 3
+            else:
+                cycles_per_bit = 2 ** 2
+        elif operation == max_operation_string:
+            cycles_per_bit = 2
+
+        cycles_executed = cycles_per_bit * max(self.crossbarColumns[colA], self.crossbarColumns[colB])
         self.advanceCycleCouter(cycles_executed)
 
     ### ------------------------------------------------------------ ###
@@ -168,9 +258,13 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
-    def MULConsecutiveRows(self, start_row, end_row, colRes, colA, colB):
-        for i in range(start_row, end_row):
-            self.crossbarArray[i][colRes] = self.crossbarArray[i][colA] * self.crossbarArray[i][colB]
+    def MULConsecutiveRows(self, start_row, end_row, colRes, colA, colB, numbersFormat=None):
+        for i in range(start_row, end_row+1):
+            if not numbersFormat:
+                self.crossbarArray[i][colRes] = self.crossbarArray[i][colA] * self.crossbarArray[i][colB]
+            else:
+                self.crossbarArray[i][colRes] = numbersFormat.convert(self.crossbarArray[i][colA] *
+                                                                     self.crossbarArray[i][colB])
 
         if self.verbose:
             self.printArray()
@@ -181,9 +275,13 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
-    def MULTaggedRows(self, tagged_rows_list, colRes, colA, colB):
+    def MULTaggedRows(self, tagged_rows_list, colRes, colA, colB, numbersFormat=None):
         for row_num in tagged_rows_list:
-            self.crossbarArray[row_num][colRes] = self.crossbarArray[row_num][colA] * self.crossbarArray[row_num][colB]
+            if not numbersFormat:
+                self.crossbarArray[row_num][colRes] = self.crossbarArray[row_num][colA] * self.crossbarArray[row_num][colB]
+            else:
+                self.crossbarArray[row_num][colRes] = numbersFormat.convert(self.crossbarArray[row_num][colA] *
+                                                                            self.crossbarArray[row_num][colB])
 
         if self.verbose:
             self.printArray()
@@ -231,12 +329,15 @@ class ReCAM:
         self.printHeader = header
 
     # Print array contents
-    def printArray(self, start_row=0, end_row=-1, start_col=0, end_col=-1, header="", tablefmt="grid"):
+    def printArray(self, start_row=0, end_row=-1, start_col=0, end_col=-1, header="", tablefmt="grid", operation=None):
         if end_row == -1: end_row=self.rowsNum
         if end_col == -1: end_col = self.rowsNum
 
         # for row in range(start_row, end_row):
         #     print(self.crossbarArray[row])
+        if operation:
+            print("%%%  Performed ", operation)
+
         if header == "":
             print(tabulate(self.crossbarArray, self.printHeader, tablefmt, stralign="center")) #other format option is "grid"
         else:

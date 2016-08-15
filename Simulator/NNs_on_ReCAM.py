@@ -75,13 +75,13 @@ def loadTargetOutputToStorage(storage, target_output, start_row, number_format, 
 ######      Broadcast a single element to multiple ReCAM rows
 #####################################################################
 def broadcastData(storage, data_col_index, data_start_row_index, data_length,
-                  destination_start_row, destination_col_index, destination_delta, total_destination_rows):
+                  destination_start_row, destination_row_hops, destination_col_index, destination_delta, total_destination_rows):
 
-    weight_row = destination_start_row
+    destination_row = destination_start_row
     for data_row in range(data_start_row_index, data_start_row_index + data_length):
-        storage.broadcastDataElement(data_col_index, data_row,  weight_row,
+        storage.broadcastDataElement(data_col_index, data_row,  destination_row,
                                      destination_col_index, destination_delta, total_destination_rows)
-        weight_row += 1
+        destination_row += destination_row_hops
 
         # cycle count is set by broadcastDataElement()
 
@@ -116,12 +116,12 @@ def parallelAccumulate(storage, col_A, col_B, res_col, start_row, rows_delta,
 ############################################################
 ######  Forward propagate an input through the net
 ############################################################
-def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, input_start_row):
+def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, MUL_column):
     bias = [1]
     number_of_nn_layers = len(nn.layers)
     start_row = nn_start_row
     activations_col = input_column
-    MUL_result_col = 2
+    MUL_result_col = MUL_column
     ACC_result_col = 3
 
     for layer_index in range(1, number_of_nn_layers):
@@ -138,7 +138,7 @@ def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_colum
 
         broadcast_start_row = start_row + weights_per_neuron # first instance of input is aligned with first neuron weights
         broadcastData(storage, activations_col, start_row, weights_per_neuron,
-                      broadcast_start_row, activations_col, weights_per_neuron, neurons_in_layer-1) #first appearance of input is already aligned with first neuron weights
+                      broadcast_start_row, 1, activations_col, weights_per_neuron, neurons_in_layer-1) #first appearance of input is already aligned with first neuron weights
 
         storage.printArray(msg="after broadcast")
 
@@ -171,16 +171,34 @@ def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_colum
     print("")
     print("=== NN output is: ", net_output)
 
+    return activations_col
+
 ############################################################
 ######  Backward propagation of an output through the net
 ############################################################
-def backPropagation(input):
+def backPropagation(nn, storage, nn_weights_column, output_column, nn_start_row, deltas_col, MUL_col, activations_col):
     print("BP in NN")
+    # delta = out-target (target is in nn_weights_column)
+    layer_index = len(nn.layers)-1
+    neurons_in_layer = len(nn.weightsMatrices[layer_index])
+    weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+    total_layer_weights = neurons_in_layer * weights_per_neuron
 
+    output_start_row = nn_start_row+nn.totalNumOfNetWeights
+    storage.rowWiseOperation(output_column, nn_weights_column, deltas_col,
+                             output_start_row, output_start_row+neurons_in_layer-1, '-')
+
+
+    #for i in range(neurons_in_layer):
+        # Broadcast each neuron's output to all its weights' rows
+    layer_start_row = output_start_row - total_layer_weights
+    broadcastData(storage, deltas_col, output_start_row, neurons_in_layer,
+                  layer_start_row, weights_per_neuron, deltas_col, 1, weights_per_neuron)
     # 1) Calc deltas: (out-target) for iteration 1, delta(N+1)*W(N+1) for the rest
     # For non-first iteration, matrix multiplication will be
 
     # 2) Calc partial derivatives: activation*delta for weights, only 'delta' for bias
+    print("Finished BP in NN")
 
 
 ############################################################
@@ -202,13 +220,18 @@ def test():
     loadNNtoStorage(storage, nn, nn_weights_column, nn_start_row)
 
     input_column = 1
-    input_start_row = 0
+    MUL_column = 2
+    input_start_row = nn_start_row
     loadInputToStorage(storage, fixed_point_10bit, nn_input_size, input_column, input_start_row)
 
     target_output = [1,2]
     loadTargetOutputToStorage(storage, target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit, nn_weights_column)
 
-    forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, input_start_row)
+    activations_col = forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, MUL_column)
+    bp_MUL_column = 1
+    bp_deltas_column = 2
+    bp_output_column = input_column
+    backPropagation(nn, storage, nn_weights_column, bp_output_column, nn_start_row, bp_deltas_column, bp_MUL_column, activations_col)
 
 
 ############################################################

@@ -144,7 +144,6 @@ class ReCAM:
 
         for i in range(total_destination_rows):
             target_row = destination_start_row + i*destination_delta
-
             self.crossbarArray[target_row][destination_col_index] = data_to_broadcast
 
         if self.verbose:
@@ -329,7 +328,7 @@ class ReCAM:
         self.printHeader = header
 
     # Print array contents
-    def printArray(self, start_row=0, end_row=-1, start_col=0, end_col=-1, header="", tablefmt="grid", operation=None):
+    def printArray(self, start_row=0, end_row=-1, start_col=0, end_col=-1, header="", tablefmt="grid", operation=None, msg=None):
         if end_row == -1: end_row=self.rowsNum
         if end_col == -1: end_col = self.rowsNum
 
@@ -337,6 +336,8 @@ class ReCAM:
         #     print(self.crossbarArray[row])
         if operation:
             print("%%%  Performed ", operation)
+        if msg:
+            print("%%%  ", msg)
 
         if header == "":
             print(tabulate(self.crossbarArray, self.printHeader, tablefmt, stralign="center")) #other format option is "grid"

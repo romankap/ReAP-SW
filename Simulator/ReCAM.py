@@ -16,6 +16,19 @@ lib_path = os.path.abspath(os.path.join('spfpm-1.1'))
 sys.path.append(lib_path)
 from tabulate import tabulate
 
+################################################
+####        AUX functions & definitions
+################################################
+max_operation_string = "max"
+
+def convert_if_needed(result, number_format=None):
+    if number_format:
+        return number_format.convert(result)
+    return result
+
+################################################
+####        ReCAM API
+################################################
 class ReCAM:
     def __init__(self, size_Bytes, bytesPerRow=32):
         self.sizeInBytes = size_Bytes
@@ -157,20 +170,25 @@ class ReCAM:
     #####################################################################
     ######      Simple arithmetic - Add, Subtract, Max
     #####################################################################
-    def rowWiseOperation(self, colA, colB, res_col, start_row, end_row, operation):
-        max_operation_string = "max"
-
+    def rowWiseOperation(self, colA, colB, res_col, start_row, end_row, operation, number_format=None):
         if operation == '+':
             for i in range(start_row,end_row+1):
-                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] + self.crossbarArray[i][colB]
+                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] + self.crossbarArray[i][colB], number_format)
+
         elif operation == '-':
             for i in range(start_row, end_row+1):
-                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] - self.crossbarArray[i][colB]
+                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] - self.crossbarArray[i][colB], number_format)
+
+        elif operation == '*':
+            for i in range(start_row, end_row + 1):
+                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] * self.crossbarArray[i][colB], number_format)
+
         elif operation == max_operation_string:
             for i in range(start_row, end_row + 1):
                 self.crossbarArray[i][res_col] = max(self.crossbarArray[i][colA], self.crossbarArray[i][colB])
         else:
             print("!!! Unknown Operation !!!")
+            return
 
         if self.verbose:
             self.printArray()
@@ -182,6 +200,8 @@ class ReCAM:
                 cycles_per_bit = 2**2
         elif operation == max_operation_string:
             cycles_per_bit = 2
+        elif operation == '*':
+            cycles_per_bit = min(self.crossbarColumns[colA],self.crossbarColumns[colB]) * 2
 
         cycles_executed = cycles_per_bit * max(self.crossbarColumns[colA],self.crossbarColumns[colB])
         self.advanceCycleCouter(cycles_executed)
@@ -190,27 +210,24 @@ class ReCAM:
     ### ------------------------------------------------------------ ###
     # Simple arithmetic - Add, Subtract, Max
     def taggedRowWiseOperation(self, colA, colB, res_col, tagged_rows_list, operation, number_format=None):
-        max_operation_string = "max"
-
         if operation == '+':
             for i in tagged_rows_list:
-                if number_format:
-                    self.crossbarArray[i][res_col] = number_format.convert(self.crossbarArray[i][colA] + self.crossbarArray[i][colB])
-                else:
-                    self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] + self.crossbarArray[i][colB]
+                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] + self.crossbarArray[i][colB], number_format)
 
         elif operation == '-':
             for i in tagged_rows_list:
-                if number_format:
-                    self.crossbarArray[i][res_col] = number_format.convert(self.crossbarArray[i][colA] - self.crossbarArray[i][colB])
-                else:
-                    self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] - self.crossbarArray[i][colB]
+                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] - self.crossbarArray[i][colB], number_format)
+
+        elif operation == '*':
+            for i in tagged_rows_list:
+                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] * self.crossbarArray[i][colB], number_format)
 
         elif operation == max_operation_string:
             for i in tagged_rows_list:
                 self.crossbarArray[i][res_col] = max(self.crossbarArray[i][colA], self.crossbarArray[i][colB])
         else:
             print("!!! Unknown Operation !!!")
+            return
 
         if self.verbose:
             operation_to_print = "taggedRowWiseOperation() with operation = " + operation
@@ -223,6 +240,8 @@ class ReCAM:
                 cycles_per_bit = 2 ** 2
         elif operation == max_operation_string:
             cycles_per_bit = 2
+        elif operation == '*':
+            cycles_per_bit = min(self.crossbarColumns[colA], self.crossbarColumns[colB]) * 2
 
         cycles_executed = cycles_per_bit * max(self.crossbarColumns[colA], self.crossbarColumns[colB])
         self.advanceCycleCouter(cycles_executed)

@@ -22,6 +22,7 @@ class NeuralNetwork:
 
         self.weightsMatrices = []
         self.weightsMatrices.append(None)
+        self.totalNumOfNetWeights = 0
 
 
     def addLayer(self, type, new_layer_neurons):
@@ -32,6 +33,7 @@ class NeuralNetwork:
 
         if type == "FC" or type == "output":
             self.addFCLayer(weights_per_neuron, new_layer_neurons, len(self.layers)-1)
+            self.totalNumOfNetWeights += weights_per_neuron*new_layer_neurons
         else:
             print("Unknown layer type")
 

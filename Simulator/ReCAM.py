@@ -80,7 +80,7 @@ class ReCAM:
                 self.crossbarArray[curr_row][column_index] = column_data[curr_row - start_row]
 
         if self.verbose:
-            operation_to_print = "load data in column " + column_index
+            operation_to_print = "load data in column " + str(column_index)
             self.printArray(operation=operation_to_print)
 
     ### ------------------------------------------------------------ ###
@@ -105,11 +105,11 @@ class ReCAM:
         #     self.crossbarArray[j][col] = 0
 
         if self.verbose:
-            operation_to_print = "shift column " + col_index + " from row "
+            operation_to_print = "shift column " + str(col_index) + " from row "
             if numOfRowsToShift > 0:
-                operation_to_print = operation_to_print + end_row + " to row " + start_row
+                operation_to_print = operation_to_print + str(end_row) + " to row " + str(start_row)
             else:
-                operation_to_print = operation_to_print + start_row + " to row " + end_row
+                operation_to_print = operation_to_print + str(start_row) + " to row " + str(end_row)
 
             self.printArray(operation=operation_to_print)
 
@@ -127,7 +127,7 @@ class ReCAM:
             self.crossbarArray[i+direction_of_shift][col_index] = self.crossbarArray[i][col_index]
 
         if self.verbose:
-            operation_to_print = "shift tagged rows in column " + col_index + " direction: " + direction_of_shift
+            operation_to_print = "shift tagged rows in column " + str(col_index) + " direction: " + "up" if direction_of_shift==1 else "down"
             self.printArray(operation=operation_to_print)
 
         # cycle count
@@ -144,7 +144,6 @@ class ReCAM:
 
         for i in range(total_destination_rows):
             target_row = destination_start_row + i*destination_delta
-
             self.crossbarArray[target_row][destination_col_index] = data_to_broadcast
 
         if self.verbose:
@@ -329,7 +328,7 @@ class ReCAM:
         self.printHeader = header
 
     # Print array contents
-    def printArray(self, start_row=0, end_row=-1, start_col=0, end_col=-1, header="", tablefmt="grid", operation=None):
+    def printArray(self, start_row=0, end_row=-1, start_col=0, end_col=-1, header="", tablefmt="grid", operation=None, msg=None):
         if end_row == -1: end_row=self.rowsNum
         if end_col == -1: end_col = self.rowsNum
 
@@ -337,6 +336,8 @@ class ReCAM:
         #     print(self.crossbarArray[row])
         if operation:
             print("%%%  Performed ", operation)
+        if msg:
+            print("%%%  ", msg)
 
         if header == "":
             print(tabulate(self.crossbarArray, self.printHeader, tablefmt, stralign="center")) #other format option is "grid"

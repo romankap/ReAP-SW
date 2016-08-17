@@ -184,6 +184,8 @@ def backPropagation(nn, storage, nn_weights_column, output_column, nn_start_row,
     activations_col = 3
     deltas_col = 4
     next_deltas_col = 5
+    table_header_row = ["NN", "Out/Activ", "dErr/dW", "Activ/Out", "deltas", "next layer"]
+    storage.setPrintHeader(table_header_row)
 
     zero_vector = [0] * nn.totalNumOfNetWeights
     storage.loadData(zero_vector, nn_start_row, nn.numbersFormat.total_bits, deltas_col)
@@ -194,33 +196,38 @@ def backPropagation(nn, storage, nn_weights_column, output_column, nn_start_row,
                              output_start_row, output_start_row+nn.layers[-1][1]-1, '-')
 
     for layer_index in range(len(nn.layers)-1, 0, -1):
+
+        # Layer structure
         neurons_in_layer = len(nn.weightsMatrices[layer_index])
         weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
         total_layer_weights = neurons_in_layer * weights_per_neuron
-        # Broadcast each neuron's output to all its weights' rows
         layer_start_row = output_start_row - total_layer_weights
+
+        # Get layer deltas to 'deltas_col'
         broadcastData(storage, next_deltas_col, output_start_row, neurons_in_layer,
                       layer_start_row, weights_per_neuron, deltas_col, 1, weights_per_neuron)
 
+        # Calculate partial derivatives for each weight
         storage.rowWiseOperation(deltas_col, activations_col, partial_derivatives_col,
                                  layer_start_row, layer_start_row+total_layer_weights-1, '*', nn.numbersFormat)
 
 
-        #Calculating delta(N+1)*W(N+1) for hidden layer
-        storage.rowWiseOperation(deltas_col, nn_weights_column, deltas_col,
-                                 layer_start_row, layer_start_row + total_layer_weights - 1, '*', nn.numbersFormat)
+        # Calculating delta(prev_layer) = delta(curr_layer)*W(curr_layer)
+        if layer_index!=1:
+            storage.rowWiseOperation(deltas_col, nn_weights_column, deltas_col,
+                                     layer_start_row, layer_start_row + total_layer_weights - 1, '*', nn.numbersFormat)
 
-        next_deltas_sum_start_row = output_start_row - weights_per_neuron
-        storage.rowWiseOperation(deltas_col, deltas_col, next_deltas_col,
-                                 next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron-1, 'max', nn.numbersFormat)
+            next_deltas_sum_start_row = output_start_row - weights_per_neuron
+            storage.rowWiseOperation(deltas_col, deltas_col, next_deltas_col,
+                                     next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron-1, 'max', nn.numbersFormat)
 
-        for neuron in range(neurons_in_layer-1):
-            rows_to_shift = range(next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron)
-            storage.shiftColumnOnTaggedRows(next_deltas_col, rows_to_shift, -weights_per_neuron)
+            for neuron in range(neurons_in_layer-1):
+                rows_to_shift = range(next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron)
+                storage.shiftColumnOnTaggedRows(next_deltas_col, rows_to_shift, -weights_per_neuron)
 
-            next_deltas_sum_start_row -= weights_per_neuron
-            storage.rowWiseOperation(deltas_col, next_deltas_col, next_deltas_col,
-                                    next_deltas_sum_start_row, next_deltas_sum_start_row+weights_per_neuron-1, '+', nn.numbersFormat)
+                next_deltas_sum_start_row -= weights_per_neuron
+                storage.rowWiseOperation(deltas_col, next_deltas_col, next_deltas_col,
+                                        next_deltas_sum_start_row, next_deltas_sum_start_row+weights_per_neuron-1, '+', nn.numbersFormat)
 
         output_start_row -= total_layer_weights
         output_column, activations_col = activations_col, output_column

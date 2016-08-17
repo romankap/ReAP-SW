@@ -75,12 +75,12 @@ def loadTargetOutputToStorage(storage, target_output, start_row, number_format, 
 ######      Broadcast a single element to multiple ReCAM rows
 #####################################################################
 def broadcastData(storage, data_col_index, data_start_row_index, data_length,
-                  destination_start_row, destination_row_hops, destination_col_index, destination_delta, total_destination_rows):
+                  destination_start_row, destination_row_hops, destination_col_index, destination_delta, destination_rows_per_element):
 
     destination_row = destination_start_row
     for data_row in range(data_start_row_index, data_start_row_index + data_length):
         storage.broadcastDataElement(data_col_index, data_row,  destination_row,
-                                     destination_col_index, destination_delta, total_destination_rows)
+                                     destination_col_index, destination_delta, destination_rows_per_element)
         destination_row += destination_row_hops
 
         # cycle count is set by broadcastDataElement()
@@ -99,7 +99,7 @@ def parallelAccumulate(storage, col_A, col_B, res_col, start_row, rows_delta,
     for i in range(1, num_of_accumulations_per_sum):
         storage.tagRows(res_col)
         tagged_rows = range(start_row_to_accumulate, start_row_to_accumulate + num_of_parallel_sums*rows_delta, rows_delta)
-        storage.shiftColumnOnTaggedRows(res_col, tagged_rows, direction_of_shift=1) #shift to higher rows
+        storage.shiftColumnOnTaggedRows(res_col, tagged_rows, distance_to_shift=1) #shift to higher-indexed rows
 
         start_row_to_accumulate = start_row + i
         storage.tagRows(res_col)
@@ -171,29 +171,60 @@ def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_colum
     print("")
     print("=== NN output is: ", net_output)
 
-    return activations_col
+    return ACC_result_col
 
 ############################################################
 ######  Backward propagation of an output through the net
 ############################################################
 def backPropagation(nn, storage, nn_weights_column, output_column, nn_start_row, deltas_col, MUL_col, activations_col):
     print("BP in NN")
-    # delta = out-target (target is in nn_weights_column)
-    layer_index = len(nn.layers)-1
-    neurons_in_layer = len(nn.weightsMatrices[layer_index])
-    weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
-    total_layer_weights = neurons_in_layer * weights_per_neuron
+
+    output_column = 1
+    partial_derivatives_col = 2
+    activations_col = 3
+    deltas_col = 4
+    next_deltas_col = 5
+
+    zero_vector = [0] * nn.totalNumOfNetWeights
+    storage.loadData(zero_vector, nn_start_row, nn.numbersFormat.total_bits, deltas_col)
+    storage.loadData(zero_vector, nn_start_row, nn.numbersFormat.total_bits, next_deltas_col)
 
     output_start_row = nn_start_row+nn.totalNumOfNetWeights
-    storage.rowWiseOperation(output_column, nn_weights_column, deltas_col,
-                             output_start_row, output_start_row+neurons_in_layer-1, '-')
+    storage.rowWiseOperation(output_column, nn_weights_column, next_deltas_col,
+                             output_start_row, output_start_row+nn.layers[-1][1]-1, '-')
 
-
-    #for i in range(neurons_in_layer):
+    for layer_index in range(len(nn.layers)-1, 0, -1):
+        neurons_in_layer = len(nn.weightsMatrices[layer_index])
+        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+        total_layer_weights = neurons_in_layer * weights_per_neuron
         # Broadcast each neuron's output to all its weights' rows
-    layer_start_row = output_start_row - total_layer_weights
-    broadcastData(storage, deltas_col, output_start_row, neurons_in_layer,
-                  layer_start_row, weights_per_neuron, deltas_col, 1, weights_per_neuron)
+        layer_start_row = output_start_row - total_layer_weights
+        broadcastData(storage, next_deltas_col, output_start_row, neurons_in_layer,
+                      layer_start_row, weights_per_neuron, deltas_col, 1, weights_per_neuron)
+
+        storage.rowWiseOperation(deltas_col, activations_col, partial_derivatives_col,
+                                 layer_start_row, layer_start_row+total_layer_weights-1, '*', nn.numbersFormat)
+
+
+        #Calculating delta(N+1)*W(N+1) for hidden layer
+        storage.rowWiseOperation(deltas_col, nn_weights_column, deltas_col,
+                                 layer_start_row, layer_start_row + total_layer_weights - 1, '*', nn.numbersFormat)
+
+        next_deltas_sum_start_row = output_start_row - weights_per_neuron
+        storage.rowWiseOperation(deltas_col, deltas_col, next_deltas_col,
+                                 next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron-1, 'max', nn.numbersFormat)
+
+        for neuron in range(neurons_in_layer-1):
+            rows_to_shift = range(next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron)
+            storage.shiftColumnOnTaggedRows(next_deltas_col, rows_to_shift, -weights_per_neuron)
+
+            next_deltas_sum_start_row -= weights_per_neuron
+            storage.rowWiseOperation(deltas_col, next_deltas_col, next_deltas_col,
+                                    next_deltas_sum_start_row, next_deltas_sum_start_row+weights_per_neuron-1, '+', nn.numbersFormat)
+
+        output_start_row -= total_layer_weights
+        output_column, activations_col = activations_col, output_column
+
     # 1) Calc deltas: (out-target) for iteration 1, delta(N+1)*W(N+1) for the rest
     # For non-first iteration, matrix multiplication will be
 
@@ -231,6 +262,7 @@ def test():
     bp_MUL_column = 1
     bp_deltas_column = 2
     bp_output_column = input_column
+
     backPropagation(nn, storage, nn_weights_column, bp_output_column, nn_start_row, bp_deltas_column, bp_MUL_column, activations_col)
 
 

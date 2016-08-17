@@ -124,6 +124,9 @@ def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_colum
     MUL_result_col = MUL_column
     ACC_result_col = accumulation_column
 
+    table_header_row = ["NN", "input", "MUL", "ACC"]
+    storage.setPrintHeader(table_header_row)
+
     for layer_index in range(1, number_of_nn_layers):
         neurons_in_layer = len(nn.weightsMatrices[layer_index])
         weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
@@ -238,9 +241,6 @@ def backPropagation(nn, storage, nn_start_row, nn_weights_column, output_col, pa
 def test():
     storage = ReCAM.ReCAM(1024)
     storage.setVerbose(True)
-
-    table_header_row = ["NN", "input", "MUL", "ACC"]
-    storage.setPrintHeader(table_header_row)
 
     nn_input_size = 3 # actual input length will be +1 due to bias
     fixed_point_10bit = FixedPoint.FixedPointFormat(6,10)

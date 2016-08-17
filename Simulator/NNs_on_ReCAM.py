@@ -116,13 +116,13 @@ def parallelAccumulate(storage, col_A, col_B, res_col, start_row, rows_delta,
 ############################################################
 ######  Forward propagate an input through the net
 ############################################################
-def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, MUL_column):
+def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, MUL_column, accumulation_column):
     bias = [1]
     number_of_nn_layers = len(nn.layers)
     start_row = nn_start_row
     activations_col = input_column
     MUL_result_col = MUL_column
-    ACC_result_col = 3
+    ACC_result_col = accumulation_column
 
     for layer_index in range(1, number_of_nn_layers):
         neurons_in_layer = len(nn.weightsMatrices[layer_index])
@@ -171,19 +171,16 @@ def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_colum
     print("")
     print("=== NN output is: ", net_output)
 
-    return ACC_result_col
+    return output_col
+
 
 ############################################################
 ######  Backward propagation of an output through the net
 ############################################################
-def backPropagation(nn, storage, nn_weights_column, output_column, nn_start_row, deltas_col, MUL_col, activations_col):
+def backPropagation(nn, storage, nn_start_row, nn_weights_column, output_col, partial_derivatives_col,
+                    activations_col, deltas_col, next_deltas_col):
     print("BP in NN")
 
-    output_column = 1
-    partial_derivatives_col = 2
-    activations_col = 3
-    deltas_col = 4
-    next_deltas_col = 5
     table_header_row = ["NN", "Out/Activ", "dErr/dW", "Activ/Out", "deltas", "next layer"]
     storage.setPrintHeader(table_header_row)
 
@@ -191,8 +188,8 @@ def backPropagation(nn, storage, nn_weights_column, output_column, nn_start_row,
     storage.loadData(zero_vector, nn_start_row, nn.numbersFormat.total_bits, deltas_col)
     storage.loadData(zero_vector, nn_start_row, nn.numbersFormat.total_bits, next_deltas_col)
 
-    output_start_row = nn_start_row+nn.totalNumOfNetWeights
-    storage.rowWiseOperation(output_column, nn_weights_column, next_deltas_col,
+    output_start_row = nn_start_row + nn.totalNumOfNetWeights
+    storage.rowWiseOperation(output_col, nn_weights_column, next_deltas_col,
                              output_start_row, output_start_row+nn.layers[-1][1]-1, '-')
 
     for layer_index in range(len(nn.layers)-1, 0, -1):
@@ -213,7 +210,7 @@ def backPropagation(nn, storage, nn_weights_column, output_column, nn_start_row,
 
 
         # Calculating delta(prev_layer) = delta(curr_layer)*W(curr_layer)
-        if layer_index!=1:
+        if layer_index!=1:     # No need for next_layer_delta in first hidden layer
             storage.rowWiseOperation(deltas_col, nn_weights_column, deltas_col,
                                      layer_start_row, layer_start_row + total_layer_weights - 1, '*', nn.numbersFormat)
 
@@ -230,12 +227,8 @@ def backPropagation(nn, storage, nn_weights_column, output_column, nn_start_row,
                                         next_deltas_sum_start_row, next_deltas_sum_start_row+weights_per_neuron-1, '+', nn.numbersFormat)
 
         output_start_row -= total_layer_weights
-        output_column, activations_col = activations_col, output_column
+        output_col, activations_col = activations_col, output_col
 
-    # 1) Calc deltas: (out-target) for iteration 1, delta(N+1)*W(N+1) for the rest
-    # For non-first iteration, matrix multiplication will be
-
-    # 2) Calc partial derivatives: activation*delta for weights, only 'delta' for bias
     print("Finished BP in NN")
 
 
@@ -258,19 +251,24 @@ def test():
     loadNNtoStorage(storage, nn, nn_weights_column, nn_start_row)
 
     input_column = 1
-    MUL_column = 2
+    FP_MUL_column = 2
+    FP_accumulation_column = 3
     input_start_row = nn_start_row
-    loadInputToStorage(storage, fixed_point_10bit, nn_input_size, input_column, input_start_row)
+    loadInputToStorage(storage, fixed_point_10bit, nn_input_size, input_column, input_start_row, FP_accumulation_column)
 
     target_output = [1,2]
     loadTargetOutputToStorage(storage, target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit, nn_weights_column)
 
-    activations_col = forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, MUL_column)
-    bp_MUL_column = 1
-    bp_deltas_column = 2
-    bp_output_column = input_column
+    FP_output_column = forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, FP_MUL_column, FP_accumulation_column)
 
-    backPropagation(nn, storage, nn_weights_column, bp_output_column, nn_start_row, bp_deltas_column, bp_MUL_column, activations_col)
+    BP_output_column = FP_output_column
+    BP_partial_derivatives_column = FP_MUL_column
+    activations_column = 1 if FP_output_column==3 else 3
+    BP_deltas_column = 4
+    BP_next_deltas_column = 5
+
+    backPropagation(nn, storage, nn_start_row, nn_weights_column, BP_output_column, BP_partial_derivatives_column,
+                    activations_column, BP_deltas_column, BP_next_deltas_column)
 
 
 ############################################################

@@ -133,18 +133,18 @@ class ReCAM:
     #####################################################################
     #####   Shift specific column values several rows up or down
     #####################################################################
-    def shiftColumnOnTaggedRows(self, col_index, tagged_rows_list, direction_of_shift=1):
+    def shiftColumnOnTaggedRows(self, col_index, tagged_rows_list, distance_to_shift=1):
         # directions_of_shift determines whether to shift up or down
 
         for i in tagged_rows_list:
-            self.crossbarArray[i+direction_of_shift][col_index] = self.crossbarArray[i][col_index]
+            self.crossbarArray[i+distance_to_shift][col_index] = self.crossbarArray[i][col_index]
 
         if self.verbose:
-            operation_to_print = "shift tagged rows in column " + str(col_index) + " direction: " + "up" if direction_of_shift==1 else "down"
+            operation_to_print = "shift tagged rows in column " + str(col_index) + " direction: " + ("up" if distance_to_shift>1 else "down")
             self.printArray(operation=operation_to_print)
 
-        # cycle count
-        cycles_executed = 3 * self.crossbarColumns[col_index]
+        # cycle count - several rows are piping the TAGs
+        cycles_executed = (abs(distance_to_shift) + 2) * self.crossbarColumns[col_index]
         self.advanceCycleCouter(cycles_executed)
 
 
@@ -152,15 +152,15 @@ class ReCAM:
     ######      Broadcast a single element to multiple ReCAM rows
     #####################################################################
     def broadcastDataElement(self, data_col_index, data_row_index,
-                      destination_start_row, destination_col_index, destination_delta, total_destination_rows):
+                      destination_start_row, destination_col_index, destination_delta, destination_rows_per_element):
         data_to_broadcast = self.crossbarArray[data_row_index][data_col_index]
 
-        for i in range(total_destination_rows):
+        for i in range(destination_rows_per_element):
             target_row = destination_start_row + i*destination_delta
             self.crossbarArray[target_row][destination_col_index] = data_to_broadcast
 
         if self.verbose:
-            self.printArray()
+            self.printArray(msg="broadcastDataElement")
 
         # cycle count
         cycles_executed = 1 + self.crossbarColumns[data_col_index]
@@ -191,7 +191,8 @@ class ReCAM:
             return
 
         if self.verbose:
-            self.printArray()
+            operation_to_print = "rowWiseOperation() with operation = " + operation
+            self.printArray(msg=operation_to_print)
 
         if operation == '-' or operation == '+':
             if res_col != colA:
@@ -264,7 +265,7 @@ class ReCAM:
             print("!!! Unknown Operation !!!")
 
         if self.verbose:
-            self.printArray()
+            self.printArray(msg="rowWiseOperationWithConstant")
 
         if operation == max_operation_string:
             cycles_per_bit = 2
@@ -285,7 +286,7 @@ class ReCAM:
                                                                      self.crossbarArray[i][colB])
 
         if self.verbose:
-            self.printArray()
+            self.printArray(msg="MULConsecutiveRows")
 
         # cycle count
         cycles_executed = (max(self.crossbarColumns[colA], self.crossbarColumns[colA]))**2

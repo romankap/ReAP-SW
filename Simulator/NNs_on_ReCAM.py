@@ -1,7 +1,7 @@
 import os, sys, time
 
 import ReCAM, Simulator
-from  NeuralNetwork import NeuralNetwork
+import NeuralNetwork
 from NumberFormats import FixedPoint
 import random
 
@@ -15,19 +15,6 @@ import swalign'''
 Every layer has number of neurons - the net will be presented as a list.
 First (last) layer is input (output) layer.
 '''
-
-
-def createFullyConnectNN(weights_format, input_size):
-    nn = NeuralNetwork(weights_format, input_size)
-    print("input layer size =", nn.layers[0])
-
-    nn.addLayer("FC", 3)
-    print("Added FC layer, size =", nn.layers[1])
-
-    nn.addLayer("output", 2)
-    print("Added output layer, size =", nn.layers[2])
-
-    return nn
 
 
 ############################################################
@@ -50,19 +37,19 @@ def loadNNtoStorage(storage, nn, column_index, nn_start_row_in_ReCAM):
 ############################################################
 ######  Load Input to ReCAM (read from file / generate)
 ############################################################
-def loadInputToStorage(storage, input_format, input_size, column_index, start_row, generate_random_input=True):
-    input_vector = []
-
-    if generate_random_input:
+def loadInputToStorage(storage, input_format, input_size, column_index, start_row, input_vector=None):
+    if not input_vector:
+        random_input_vector = []
         for i in range(input_size):
-            input_vector.append(input_format.convert(random.uniform(0.0001, 1)))
+            random_input_vector.append(input_format.convert(random.uniform(0.0001, 1)))
         #bias
-        input_vector.append(1)
-    else:
-        print("Loading input from HD isn't supported yet")
-        #Bias should be added manually (either here or in FP function)
+            random_input_vector.append(1)
+        storage.loadData(random_input_vector, start_row, input_format.total_bits, column_index)
 
-    storage.loadData(input_vector, start_row, input_format.total_bits, column_index)
+    else:
+        print("Loading input from input_vector")
+        #Bias should be added manually (either here or in FP function)
+        storage.loadData(input_vector, start_row, input_format.total_bits, column_index)
 
 
 #####################################################################
@@ -70,6 +57,7 @@ def loadInputToStorage(storage, input_format, input_size, column_index, start_ro
 #####################################################################
 def loadTargetOutputToStorage(storage, target_output, start_row, number_format, column_index):
     storage.loadData(target_output, start_row, number_format.total_bits, column_index)
+
 
 #####################################################################
 ######      Broadcast a single element to multiple ReCAM rows
@@ -244,7 +232,7 @@ def test():
 
     nn_input_size = 3 # actual input length will be +1 due to bias
     fixed_point_10bit = FixedPoint.FixedPointFormat(6,10)
-    nn = createFullyConnectNN(fixed_point_10bit, nn_input_size)
+    nn = NeuralNetwork.createDemoFullyConnectNN(fixed_point_10bit, nn_input_size)
 
     nn_weights_column = 0
     nn_start_row = 0
@@ -254,7 +242,7 @@ def test():
     FP_MUL_column = 2
     FP_accumulation_column = 3
     input_start_row = nn_start_row
-    loadInputToStorage(storage, fixed_point_10bit, nn_input_size, input_column, input_start_row, FP_accumulation_column)
+    loadInputToStorage(storage, fixed_point_10bit, nn_input_size, input_column, input_start_row)
 
     target_output = [1,2]
     loadTargetOutputToStorage(storage, target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit, nn_weights_column)

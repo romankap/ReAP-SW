@@ -162,7 +162,7 @@ def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_colum
     print("")
     print("=== NN output is: ", net_output)
 
-    return output_col
+    return (net_output, output_col)
 
 
 ############################################################
@@ -226,7 +226,7 @@ def backPropagation(nn, storage, nn_start_row, nn_weights_column, output_col, pa
 ############################################################
 ######  Test function
 ############################################################
-def test():
+def NN_on_ReCAM_test():
     storage = ReCAM.ReCAM(1024)
     storage.setVerbose(True)
 
@@ -262,4 +262,4 @@ def test():
 ############################################################
 ######  Execute
 ############################################################
-test()
+#NN_on_ReCAM_test()

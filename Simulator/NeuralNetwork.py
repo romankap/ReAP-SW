@@ -12,6 +12,28 @@ Every layer has number of neurons - the net will be presented as a list.
 First (last) layer is input (output) layer.
 '''
 
+def generateRandomInput(input_size, input_format):
+    input_vector = []
+    for i in range(input_size):
+        input_vector.append(input_format.convert(random.uniform(0.0001, 1)))
+    #bias
+    input_vector.append(1)
+    return input_vector
+
+
+def createDemoFullyConnectNN(weights_format, input_size):
+    nn = NeuralNetwork(weights_format, input_size)
+    print("input layer size =", nn.layers[0])
+
+    nn.addLayer("FC", 3)
+    print("Added FC layer, size =", nn.layers[1])
+
+    nn.addLayer("output", 2)
+    print("Added output layer, size =", nn.layers[2])
+
+    return nn
+
+
 class NeuralNetwork:
     def __init__(self, number_format, inputs = 10):
         random.seed()

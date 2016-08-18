@@ -51,8 +51,31 @@ def loadInput(storage, input_format, input_size, column_index, start_row, genera
 ############################################################
 ######  Forward propagate an input through the net
 ############################################################
-def forwardPropagation(nn):
+def ReLUactivation(input):
+    return max(0, input)
+
+def forwardPropagation(nn, input, number_format):
     print("FP in NN")
+
+    layer_activations = input
+    net_output = []
+    num_of_net_layers = len(nn.layers)
+
+    for layer_index in range(1, num_of_net_layers):
+        layer_output = []
+        for neuron in range(len(nn.weightsMatrices[layer_index])):
+            sum = 0
+            for weight in range(len(nn.weightsMatrices[layer_index][neuron])):
+                sum += number_format.convert(layer_activations[weight] * nn.weightsMatrices[layer_index][neuron][weight])
+            layer_output.append(sum)
+
+        if layer_index!=num_of_net_layers-1:
+            layer_activations = layer_output
+            layer_activations.append(1)
+        else:
+            net_output = layer_output
+
+    print(net_output)
 
 
 ############################################################

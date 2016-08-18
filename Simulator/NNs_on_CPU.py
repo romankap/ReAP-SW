@@ -57,33 +57,36 @@ def ReLUactivation(input):
 def forwardPropagation(nn, input, number_format):
     print("FP in NN")
 
-    layer_activations = input
-    net_output = []
     num_of_net_layers = len(nn.layers)
+    activations =[]
+    activations.append(input)
 
     for layer_index in range(1, num_of_net_layers):
-        layer_output = []
-        for neuron in range(len(nn.weightsMatrices[layer_index])):
+        activations.append([])
+        neurons_in_layer = len(nn.weightsMatrices[layer_index])
+        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+
+        for neuron in range(neurons_in_layer):
             sum = 0
-            for weight in range(len(nn.weightsMatrices[layer_index][neuron])):
-                sum += number_format.convert(layer_activations[weight] * nn.weightsMatrices[layer_index][neuron][weight])
-            layer_output.append(sum)
+            for weight in range(weights_per_neuron):
+                sum += number_format.convert(activations[layer_index-1][weight] * nn.weightsMatrices[layer_index][neuron][weight])
+            activations[layer_index].append(sum)
 
         if layer_index!=num_of_net_layers-1:
-            layer_activations = layer_output
-            layer_activations.append(1)
-        else:
-            net_output = layer_output
+            activations[layer_index].append(1) #bias exists only in input+hidden layers
 
-    print(net_output)
+    #print(net_output)
+    return activations
 
 
 ############################################################
 ######  Backward propagation of an output through the net
 ############################################################
-def backPropagation(nn, storage, nn_start_row, nn_weights_column, output_col, partial_derivatives_col,
-                    activations_col, deltas_col, next_deltas_col):
-    print("BP in NN")
+def backPropagation(nn, output, target, number_format):
+
+    delta = output - target
+    num_of_net_layers = len(nn.layers)
+
 
     print("Finished BP in NN")
 

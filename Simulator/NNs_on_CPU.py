@@ -30,6 +30,27 @@ def createFullyConnectNN(weights_format, input_size):
     return nn
 
 
+def listWithListOperation(list_A, list_B, res_list, operation, number_format=None):
+    if operation=='-':
+        for i in range(len(list_A)):
+            res_list[i] = list_A[i] - list_B[i]
+    elif operation == '+':
+        for i in range(len(list_A)):
+            res_list[i] = list_A[i] + list_B[i]
+    elif operation == '*':
+        for i in range(len(list_A)):
+            res_list[i] = number_format.convert(list_A[i] * list_B[i])
+
+
+def listWithScalarOperation(scalar, list_A, res_list, operation, number_format):
+    if operation == '*':
+        for i in range(len(list_A)):
+            res_list[i] = number_format.convert(scalar * list_A[i])
+    elif operation == '+':
+        for i in range(len(list_A)):
+            res_list[i] = number_format.convert(scalar + list_A[i])
+
+
 ############################################################
 ######  Load Input to ReCAM (read from file / generate)
 ############################################################
@@ -58,7 +79,7 @@ def forwardPropagation(nn, input, number_format):
     print("FP in NN")
 
     num_of_net_layers = len(nn.layers)
-    activations =[]
+    activations = []
     activations.append(input)
 
     for layer_index in range(1, num_of_net_layers):
@@ -82,13 +103,39 @@ def forwardPropagation(nn, input, number_format):
 ############################################################
 ######  Backward propagation of an output through the net
 ############################################################
-def backPropagation(nn, output, target, number_format):
-
-    delta = output - target
+def backPropagation(nn, activations, target, number_format):
     num_of_net_layers = len(nn.layers)
 
+    partial_derivatives = []
+    partial_derivatives.append(None)
 
-    print("Finished BP in NN")
+    curr_delta = None
+    prev_delta = None
+    for layer_index in range(num_of_net_layers-1, 0, -1):
+        neurons_in_layer = len(nn.weightsMatrices[layer_index])
+        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+
+        if layer_index==num_of_net_layers-1:
+            curr_delta = [0] * len(activations[num_of_net_layers - 1])
+            listWithListOperation(activations[num_of_net_layers - 1], target, curr_delta, '-')
+        else:
+            for neuron_index in range(neurons_in_layer):
+                temp_delta = [0] * weights_per_neuron
+                curr_delta = [0] * weights_per_neuron
+                listWithScalarOperation(prev_delta[neuron_index], nn.weightsMatrices[layer_index][neuron_index], temp_delta, '*', number_format)
+                listWithListOperation(temp_delta, curr_delta, curr_delta, '+')
+
+        partial_derivatives.append([])
+
+        for neuron_index in range(neurons_in_layer):
+            neuron_pds = [0] * weights_per_neuron
+            listWithListOperation(curr_delta, activations[layer_index], neuron_pds, '*', number_format)
+            partial_derivatives[layer_index].append(neuron_pds)
+
+        prev_delta = curr_delta
+
+    print("Finished BP in NN on CPU")
+    return partial_derivatives
 
 
 ############################################################

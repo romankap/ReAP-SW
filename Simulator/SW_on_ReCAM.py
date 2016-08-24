@@ -11,15 +11,15 @@ DNA_match_score = 2; DNA_mismatch_score = -1; DNA_gap_first = -1; DNA_gap_extend
 def test_func(test_param):
     test_param += 1
 
-def getOperatingRows(i, offset, lenA, lenB):
+def getOperatingRows(iteration, offset, lenA, lenB):
     start_row = -1; end_row = -1
 
-    if i < lenB:
-        start_row = 0; end_row = i
-    elif i < lenA:
-        start_row = i-lenB+1; end_row = i
+    if iteration < lenB:
+        start_row = 0; end_row = iteration
+    elif iteration < lenA:
+        start_row = iteration - lenB + 1; end_row = iteration
     else:
-        start_row = i-lenB+1; end_row = lenA-1
+        start_row = iteration - lenB + 1; end_row = lenA - 1
 
     return start_row+offset, end_row+offset
 

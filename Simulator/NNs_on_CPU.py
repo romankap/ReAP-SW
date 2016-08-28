@@ -106,8 +106,7 @@ def forwardPropagation(nn, input, number_format):
 def backPropagation(nn, activations, target, number_format):
     num_of_net_layers = len(nn.layers)
 
-    partial_derivatives = []
-    partial_derivatives.append(None)
+    partial_derivatives = [None]
 
     curr_delta = None
     prev_delta = None
@@ -125,7 +124,6 @@ def backPropagation(nn, activations, target, number_format):
         # Deltas of hidden layers
         else:
             neurons_in_prev_bp_layer = len(nn.weightsMatrices[layer_index+1])
-            weights_per_neuron_in_prev_bp_layer = len(nn.weightsMatrices[layer_index+1][0])
 
             curr_delta = [0] * weights_per_neuron
             for neuron_in_prev_bp_index in range(neurons_in_prev_bp_layer):
@@ -161,4 +159,4 @@ def test():
 ############################################################
 ######  Execute
 ############################################################
-test()
+#test()

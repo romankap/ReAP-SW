@@ -38,7 +38,6 @@ def test():
     input_start_row = nn_start_row
     NNs_on_ReCAM.loadInputToStorage(storage, fixed_point_10bit_precision, nn_input_size, input_column, input_start_row, input_vector)
 
-
     NNs_on_ReCAM.loadTargetOutputToStorage(storage, target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit_precision, nn_weights_column)
 
     (ReCAM_FP_output, ReCAM_FP_output_col_index) = NNs_on_ReCAM.forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, FP_MUL_column, FP_accumulation_column)
@@ -52,21 +51,22 @@ def test():
                                 activations_column, BP_deltas_column, BP_next_deltas_column)
     print("Finished ReCAM Execution")
 
-    ################################
-    ####            CPU         ####
-    ################################
+    ####################################
+    ####            CPU             ####
+    ####################################
     num_of_net_layers = len(nn.layers)
     CPU_activations = NNs_on_CPU.forwardPropagation(nn, input_vector, fixed_point_10bit_precision)
 
-    NNs_on_CPU.backPropagation(nn, CPU_activations, target_output, fixed_point_10bit_precision)
+    CPU_pds = NNs_on_CPU.backPropagation(nn, CPU_activations, target_output, fixed_point_10bit_precision)
     print("Finished CPU Execution")
 
-    if ReCAM_FP_output == CPU_activations[num_of_net_layers-1]:
-        print("VVV ReCAM and CPU FP outputs match VVV")
-    else:
-        print("--- ReCAM and CPU FP outputs DO NOT match!!!")
-        print("ReCAM output, ", ReCAM_FP_output)
-        print("CPU output, ", CPU_activations[num_of_net_layers-1])
+    ################################################################
+    ####            Verify partial derivatives match            ####
+    ################################################################
+    # TODO: get ReCAM PDS: go over pds column and append pds to a 3d array, similar to weights array.
+
+    # for weighted_layer in range(len(nn.layers)-1, 1, -1):
+    #     if (CPU_pds == )
 
 
 #################################

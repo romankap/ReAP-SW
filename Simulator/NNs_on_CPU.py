@@ -111,25 +111,31 @@ def backPropagation(nn, activations, target, number_format):
 
     curr_delta = None
     prev_delta = None
+    for layer_index in range(num_of_net_layers-1):
+        partial_derivatives.append([])
+
     for layer_index in range(num_of_net_layers-1, 0, -1):
         neurons_in_layer = len(nn.weightsMatrices[layer_index])
         weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
 
+        # Deltas of output layer
         if layer_index==num_of_net_layers-1:
             curr_delta = [0] * len(activations[num_of_net_layers - 1])
             listWithListOperation(activations[num_of_net_layers - 1], target, curr_delta, '-')
+        # Deltas of hidden layers
         else:
-            for neuron_index in range(neurons_in_layer):
-                temp_delta = [0] * weights_per_neuron
-                curr_delta = [0] * weights_per_neuron
-                listWithScalarOperation(prev_delta[neuron_index], nn.weightsMatrices[layer_index][neuron_index], temp_delta, '*', number_format)
-                listWithListOperation(temp_delta, curr_delta, curr_delta, '+')
+            neurons_in_prev_bp_layer = len(nn.weightsMatrices[layer_index+1])
+            weights_per_neuron_in_prev_bp_layer = len(nn.weightsMatrices[layer_index+1][0])
 
-        partial_derivatives.append([])
+            curr_delta = [0] * weights_per_neuron
+            for neuron_in_prev_bp_index in range(neurons_in_prev_bp_layer):
+                temp_delta = [0] * weights_per_neuron
+                listWithScalarOperation(prev_delta[neuron_in_prev_bp_index], nn.weightsMatrices[layer_index+1][neuron_in_prev_bp_index], temp_delta, '*', number_format)
+                listWithListOperation(temp_delta, curr_delta, curr_delta, '+')
 
         for neuron_index in range(neurons_in_layer):
             neuron_pds = [0] * weights_per_neuron
-            listWithListOperation(curr_delta, activations[layer_index], neuron_pds, '*', number_format)
+            listWithScalarOperation(curr_delta[neuron_index], activations[layer_index-1], neuron_pds, '*', number_format)
             partial_derivatives[layer_index].append(neuron_pds)
 
         prev_delta = curr_delta

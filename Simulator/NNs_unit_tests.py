@@ -64,6 +64,12 @@ def test():
     ####            Verify partial derivatives match            ####
     ################################################################
     # TODO: get ReCAM PDS: go over pds column and append pds to a 3d array, similar to weights array.
+    # column = BP_partial_derivatives_column.
+    # Loop structure:
+
+    # for layer_index in range(len(nn.layers)-1, 1, -1):
+    #   weights_per_neuron = len(nn.weigthsMatrix[layer_index][0])
+    #   for weight_index in range(weights_per_neuron)
 
     # for weighted_layer in range(len(nn.layers)-1, 1, -1):
     #     if (CPU_pds == )

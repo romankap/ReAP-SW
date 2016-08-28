@@ -5,7 +5,7 @@ import ReCAM, Simulator
 import NeuralNetwork
 from NumberFormats import FixedPoint
 import NNs_on_ReCAM, NNs_on_CPU
-import numpy
+#import numpy
 import random
 
 
@@ -19,7 +19,7 @@ def test():
     fixed_point_10bit_precision = FixedPoint.FixedPointFormat(6,10)
     nn = NeuralNetwork.createDemoFullyConnectNN(fixed_point_10bit_precision, nn_input_size)
 
-    input_vector = NeuralNetwork.generateRandomInput(nn_input_size, fixed_point_10bit_precision)
+    input_vector = [1]*(nn_input_size+1)
     target_output = [1, 2]
 
     ############################
@@ -67,5 +67,10 @@ def test():
         print("--- ReCAM and CPU FP outputs DO NOT match!!!")
         print("ReCAM output, ", ReCAM_FP_output)
         print("CPU output, ", CPU_activations[num_of_net_layers-1])
+
+
+#################################
+####         Execute         ####
+#################################
 
 test()

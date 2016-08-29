@@ -124,10 +124,11 @@ def backPropagation(nn, activations, target, number_format):
         # Deltas of hidden layers
         else:
             neurons_in_prev_bp_layer = len(nn.weightsMatrices[layer_index+1])
+            weights_in_prev_bp_layer_neuron = len(nn.weightsMatrices[layer_index+1][0])
 
-            curr_delta = [0] * weights_per_neuron
+            curr_delta = [0] * weights_in_prev_bp_layer_neuron
             for neuron_in_prev_bp_index in range(neurons_in_prev_bp_layer):
-                temp_delta = [0] * weights_per_neuron
+                temp_delta = [0] * weights_in_prev_bp_layer_neuron
                 listWithScalarOperation(prev_delta[neuron_in_prev_bp_index], nn.weightsMatrices[layer_index+1][neuron_in_prev_bp_index], temp_delta, '*', number_format)
                 listWithListOperation(temp_delta, curr_delta, curr_delta, '+')
 

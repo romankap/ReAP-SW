@@ -13,11 +13,20 @@ import random
 sys.path.append(lib_path)
 import swalign'''
 
-def getReCAMpds(storage, pds_column):
-    ReCAM_pds = []
-    for row_index in range(storage.rowsNum):
-        if storage.crossbarArray[row_index][pds_column]:
-            ReCAM_pds.append(storage.crossbarArray[row_index][pds_column])
+def getReCAMpds(nn, storage, pds_column):
+    ReCAM_pds = [None]
+    row_index = 0
+
+    for layer_index in range(1, len(nn.layers)):
+        ReCAM_pds.append([])
+
+        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+        for neuron_index in range(len(nn.weightsMatrices[layer_index])):
+            ReCAM_pds[layer_index].append([])
+
+            for weight_index in range(weights_per_neuron):
+                ReCAM_pds[layer_index][neuron_index].append(storage.crossbarArray[row_index][pds_column])
+                row_index += 1
 
     return ReCAM_pds
 
@@ -30,7 +39,8 @@ def compareReCAMandCPUpds(ReCAM_pds, CPU_pds):
             weights_per_neuron = len(CPU_pds[layer_index][0])
 
             for weight_index in range(weights_per_neuron):
-                if ReCAM_pds[index_in_ReCAM] != CPU_pds[layer_index][neuron_index][weight_index]:
+                #if ReCAM_pds[index_in_ReCAM] != CPU_pds[layer_index][neuron_index][weight_index]:
+                if ReCAM_pds[layer_index][neuron_index][weight_index] != CPU_pds[layer_index][neuron_index][weight_index]:
                     print("")
                     print("ERROR: Mismatching ReCAM and CPU pds!")
                     print("Index in ReCAM: {}. CPU[{}][{}][{}]".format(index_in_ReCAM, layer_index, neuron_index, weight_index))
@@ -89,7 +99,7 @@ def test():
     ################################################################
     ####            Verify partial derivatives match            ####
     ################################################################
-    ReCAM_pds = getReCAMpds(storage, BP_partial_derivatives_column)
+    ReCAM_pds = getReCAMpds(nn, storage, BP_partial_derivatives_column)
 
     compareReCAMandCPUpds(ReCAM_pds, CPU_pds)
 

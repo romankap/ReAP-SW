@@ -61,7 +61,7 @@ def test():
     ############################
     ####       ReCAM        ####
     ############################
-    storage = ReCAM.ReCAM(1024)
+    storage = ReCAM.ReCAM(2048)
     storage.setVerbose(True)
 
     nn_weights_column = 0

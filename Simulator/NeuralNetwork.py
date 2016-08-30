@@ -28,8 +28,11 @@ def createDemoFullyConnectNN(weights_format, input_size):
     nn.addLayer("FC", 3)
     print("Added FC layer, size =", nn.layers[1])
 
+    nn.addLayer("FC", 5)
+    print("Added FC layer, size =", nn.layers[2])
+
     nn.addLayer("output", 2)
-    print("Added output layer, size =", nn.layers[2])
+    print("Added output layer, size =", nn.layers[3])
 
     return nn
 

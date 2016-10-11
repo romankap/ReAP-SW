@@ -148,8 +148,7 @@ def backPropagation(nn, activations, target, number_format):
 ############################################################
 def update_weights(nn, partial_derivatives, number_format, learning_rate = 0.05):
     num_of_net_layers = len(nn.layers)
-    learning_values_list = []
-    learning_values_list.extend(partial_derivatives)
+    learning_values_list = copy.deepcopy(partial_derivatives)
 
     #learning_values_list.append([])
 

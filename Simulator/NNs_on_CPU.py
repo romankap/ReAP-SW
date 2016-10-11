@@ -3,7 +3,7 @@ import os, sys, time
 import ReCAM, Simulator
 from  NeuralNetwork import NeuralNetwork
 from NumberFormats import FixedPoint
-import random
+import random, copy
 
 
 '''lib_path = os.path.abspath(os.path.join('swalign-0.3.3'))
@@ -141,6 +141,42 @@ def backPropagation(nn, activations, target, number_format):
 
     print("Finished BP in NN on CPU")
     return partial_derivatives
+
+
+############################################################
+######  Backward propagation of an output through the net
+############################################################
+def update_weights(nn, partial_derivatives, number_format, learning_rate = 0.05):
+    num_of_net_layers = len(nn.layers)
+    learning_values_list = []
+    learning_values_list.extend(partial_derivatives)
+
+    #learning_values_list.append([])
+
+    # Simple Learning Algorithm Steps
+    # 1. PDs * learning_rate -> Learning_values_list
+    # 2. Update net weights with Learning_values_list
+    # 3. LATER: modify to implement SGD (define a mini-batch size and accumulate)
+
+    for layer_index in range(num_of_net_layers-1, 0, -1):
+        neurons_in_layer = len(nn.weightsMatrices[layer_index])
+        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+
+        for neuron_index in range(neurons_in_layer):
+            #neuron_learning_values = [0] * weights_per_neuron
+
+            # PDs * learning_rate
+            listWithScalarOperation(learning_rate, partial_derivatives[layer_index][neuron_index], learning_values_list[layer_index][neuron_index],
+                                    '*', number_format)
+
+            #learning_values_list[layer_index].append(neuron_learning_values)
+
+    for layer_index in range(num_of_net_layers - 1, 0, -1):
+        neurons_in_layer = len(nn.weightsMatrices[layer_index])
+        for neuron_index in range(neurons_in_layer):
+            listWithListOperation(nn.weightsMatrices[layer_index][neuron_index], learning_values_list[layer_index][neuron_index],
+                                  nn.weightsMatrices[layer_index][neuron_index], '-', number_format)
+
 
 
 ############################################################

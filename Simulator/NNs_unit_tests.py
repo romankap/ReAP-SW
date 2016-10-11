@@ -62,7 +62,7 @@ def test():
     ####       ReCAM        ####
     ############################
     storage = ReCAM.ReCAM(2048)
-    storage.setVerbose(True)
+    storage.setVerbose(False)
 
     nn_weights_column = 0
     nn_start_row = 0
@@ -94,6 +94,8 @@ def test():
     CPU_activations = NNs_on_CPU.forwardPropagation(nn, input_vector, fixed_point_10bit_precision)
 
     CPU_pds = NNs_on_CPU.backPropagation(nn, CPU_activations, target_output, fixed_point_10bit_precision)
+
+    NNs_on_CPU.update_weights(nn, CPU_pds, fixed_point_10bit_precision, 0.05)
     print("Finished CPU Execution")
 
     ################################################################
@@ -102,6 +104,7 @@ def test():
     ReCAM_pds = getReCAMpds(nn, storage, BP_partial_derivatives_column)
 
     compareReCAMandCPUpds(ReCAM_pds, CPU_pds)
+
 
 
 #################################

@@ -102,9 +102,9 @@ def parallelAccumulate(storage, col_A, col_B, res_col, start_row, rows_delta,
 
 
 ############################################################
-######  Forward propagate an input through the net
+######  Feedforward an input through the net
 ############################################################
-def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, MUL_column, accumulation_column):
+def feedforward(nn, storage, nn_weights_column, nn_start_row, input_column, MUL_column, accumulation_column):
     bias = [1]
     number_of_nn_layers = len(nn.layers)
     start_row = nn_start_row
@@ -121,7 +121,7 @@ def forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_colum
         layer_total_weights = neurons_in_layer * weights_per_neuron
         zero_vector = [0] * layer_total_weights
 
-        storage.printArray(msg=("beginning of forwardPropagation iteration, layer " + str(layer_index)))
+        storage.printArray(msg=("beginning of feedforward iteration, layer " + str(layer_index)))
         # 1) Broadcast
         #Load bias
         activations_from_prev_layer = nn.layers[layer_index - 1][1]
@@ -197,13 +197,13 @@ def backPropagation(nn, storage, nn_start_row, nn_weights_column, output_col, pa
 
         # Calculate partial derivatives for each weight
         storage.rowWiseOperation(deltas_col, activations_col, partial_derivatives_col,
-                                 layer_start_row, layer_start_row+total_layer_weights-1, '*', nn.numbersFormat)
+                                 layer_start_row, layer_start_row + total_layer_weights-1, '*', nn.numbersFormat)
 
 
         # Calculating delta(prev_layer) = delta(curr_layer)*W(curr_layer)
         if layer_index!=1:     # No need for next_layer_delta in first hidden layer
             storage.rowWiseOperation(deltas_col, nn_weights_column, deltas_col,
-                                     layer_start_row, layer_start_row + total_layer_weights - 1, '*', nn.numbersFormat)
+                                     layer_start_row, layer_start_row + total_layer_weights-1, '*', nn.numbersFormat)
 
             next_deltas_sum_start_row = output_start_row - weights_per_neuron
             storage.rowWiseOperation(deltas_col, deltas_col, next_deltas_col,
@@ -222,6 +222,17 @@ def backPropagation(nn, storage, nn_start_row, nn_weights_column, output_col, pa
 
     print("Finished BP in NN")
 
+############################################################
+######  Update net weights - all in parallel
+############################################################
+def update_weights(nn, storage, nn_start_row, nn_weights_column, partial_derivatives_column, learning_rate=0.05):
+    output_start_row = nn_start_row + nn.totalNumOfNetWeights
+    storage.rowWiseOperationWithConstant(partial_derivatives_column, learning_rate, partial_derivatives_column,
+                                         nn_start_row, output_start_row-1, '*', nn.numbersFormat)
+
+    storage.rowWiseOperation(nn_weights_column, partial_derivatives_column, nn_weights_column,
+                             nn_start_row, output_start_row-1, '-', nn.numbersFormat)
+    print("Updated NN weights in ReCAM")
 
 ############################################################
 ######  Test function
@@ -247,7 +258,7 @@ def NN_on_ReCAM_test():
     target_output = [1,2]
     loadTargetOutputToStorage(storage, target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit, nn_weights_column)
 
-    FP_output_column = forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, FP_MUL_column, FP_accumulation_column)
+    FP_output_column = feedforward(nn, storage, nn_weights_column, nn_start_row, input_column, FP_MUL_column, FP_accumulation_column)
 
     BP_output_column = FP_output_column
     BP_partial_derivatives_column = FP_MUL_column

@@ -249,26 +249,33 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Simple variable-constant arithmetic  - Add / Subtract
-    def rowWiseOperationWithConstant(self, colA, const_scalar, res_col, start_row, end_row, operation):
+    def rowWiseOperationWithConstant(self, colA, const_scalar, res_col, start_row, end_row, operation, number_format=None):
         max_operation_string = "max"
+        converted_scalar = number_format.convert(const_scalar) if number_format!=None else const_scalar
 
         if operation == '+':
             for i in range(start_row, end_row+1):
-                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] + const_scalar
+                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] + converted_scalar, number_format)
         elif operation == '-':
             for i in range(start_row, end_row+1):
-                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA] - const_scalar
+                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] - converted_scalar, number_format)
+        elif operation == '*':
+            for i in range(start_row, end_row + 1):
+                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] * converted_scalar, number_format)
         elif operation == max_operation_string:
             for i in range(start_row, end_row + 1):
-                self.crossbarArray[i][res_col] = max(self.crossbarArray[i][colA], const_scalar)
+                self.crossbarArray[i][res_col] = convert_if_needed(max(self.crossbarArray[i][colA], converted_scalar), number_format)
         else:
-            print("!!! Unknown Operation !!!")
+            print("!!! Unknown Operation in rowWiseOperationWithConstant: " + operation + " !!!")
+            exit()
 
         if self.verbose:
             self.printArray(msg="rowWiseOperationWithConstant")
 
         if operation == max_operation_string:
             cycles_per_bit = 2
+        elif operation == '*':
+            cycles_per_bit = self.crossbarColumns[colA] * 2
         else:
             cycles_per_bit = 2 ** 2
 

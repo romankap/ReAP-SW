@@ -149,6 +149,7 @@ def backPropagation(nn, activations, target):
 def update_weights(nn, partial_derivatives, learning_rate = 0.05):
     num_of_net_layers = len(nn.layers)
     learning_values_list = copy.deepcopy(partial_derivatives)
+    formatted_learning_rate = nn.numbersFormat.convert(learning_rate)
 
     #learning_values_list.append([])
 
@@ -162,13 +163,9 @@ def update_weights(nn, partial_derivatives, learning_rate = 0.05):
         weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
 
         for neuron_index in range(neurons_in_layer):
-            #neuron_learning_values = [0] * weights_per_neuron
-
             # PDs * learning_rate
-            listWithScalarOperation(learning_rate, partial_derivatives[layer_index][neuron_index], learning_values_list[layer_index][neuron_index],
+            listWithScalarOperation(formatted_learning_rate, partial_derivatives[layer_index][neuron_index], learning_values_list[layer_index][neuron_index],
                                     '*', nn.numbersFormat)
-
-            #learning_values_list[layer_index].append(neuron_learning_values)
 
     for layer_index in range(num_of_net_layers - 1, 0, -1):
         neurons_in_layer = len(nn.weightsMatrices[layer_index])

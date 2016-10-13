@@ -121,7 +121,8 @@ def feedforward(nn, storage, nn_weights_column, nn_start_row, input_column, MUL_
         layer_total_weights = neurons_in_layer * weights_per_neuron
         zero_vector = [0] * layer_total_weights
 
-        storage.printArray(msg=("beginning of feedforward iteration, layer " + str(layer_index)))
+        if storage.verbose:
+            storage.printArray(msg=("beginning of feedforward iteration, layer " + str(layer_index)))
         # 1) Broadcast
         #Load bias
         activations_from_prev_layer = nn.layers[layer_index - 1][1]
@@ -131,7 +132,8 @@ def feedforward(nn, storage, nn_weights_column, nn_start_row, input_column, MUL_
         broadcastData(storage, activations_col, start_row, weights_per_neuron,
                       broadcast_start_row, 1, activations_col, weights_per_neuron, neurons_in_layer-1) #first appearance of input is already aligned with first neuron weights
 
-        storage.printArray(msg="after broadcast")
+        if storage.verbose:
+            storage.printArray(msg="after broadcast")
 
         # 2) MUL
         hidden_layer_start_row = start_row
@@ -139,7 +141,8 @@ def feedforward(nn, storage, nn_weights_column, nn_start_row, input_column, MUL_
         storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, MUL_result_col)
         storage.MULConsecutiveRows(start_row, start_row + layer_total_weights-1, MUL_result_col, nn_weights_column, activations_col, nn.numbersFormat)
 
-        storage.printArray(msg="after MUL")
+        if storage.verbose:
+            storage.printArray(msg="after MUL")
 
         # 3) Accumulate
 
@@ -152,8 +155,8 @@ def feedforward(nn, storage, nn_weights_column, nn_start_row, input_column, MUL_
         start_row += layer_total_weights
         activations_col, ACC_result_col = ACC_result_col, activations_col
 
-
-        storage.printArray(msg="after Accumulate")
+        if storage.verbose:
+            storage.printArray(msg="after Accumulate")
 
     output_col = activations_col #after each iteration, activations_col holds layer output
     net_output = []

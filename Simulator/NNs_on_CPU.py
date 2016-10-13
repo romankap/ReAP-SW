@@ -120,7 +120,7 @@ def backPropagation(nn, activations, target):
         # Deltas of output layer
         if layer_index==num_of_net_layers-1:
             curr_delta = [0] * len(activations[num_of_net_layers - 1])
-            listWithListOperation(activations[num_of_net_layers - 1], target, curr_delta, '-')
+            listWithListOperation(activations[num_of_net_layers - 1], target, curr_delta, '-', nn.numbersFormat)
         # Deltas of hidden layers
         else:
             neurons_in_prev_bp_layer = len(nn.weightsMatrices[layer_index+1])
@@ -130,7 +130,7 @@ def backPropagation(nn, activations, target):
             for neuron_in_prev_bp_index in range(neurons_in_prev_bp_layer):
                 temp_delta = [0] * weights_in_prev_bp_layer_neuron
                 listWithScalarOperation(prev_delta[neuron_in_prev_bp_index], nn.weightsMatrices[layer_index+1][neuron_in_prev_bp_index], temp_delta, '*', nn.numbersFormat)
-                listWithListOperation(temp_delta, curr_delta, curr_delta, '+')
+                listWithListOperation(temp_delta, curr_delta, curr_delta, '+', nn.numbersFormat)
 
         for neuron_index in range(neurons_in_layer):
             neuron_pds = [0] * weights_per_neuron
@@ -151,8 +151,6 @@ def update_weights(nn, partial_derivatives, learning_rate = 0.05):
     learning_values_list = copy.deepcopy(partial_derivatives)
     formatted_learning_rate = nn.numbersFormat.convert(learning_rate)
 
-    #learning_values_list.append([])
-
     # Simple Learning Algorithm Steps
     # 1. PDs * learning_rate -> Learning_values_list
     # 2. Update net weights with Learning_values_list
@@ -164,8 +162,8 @@ def update_weights(nn, partial_derivatives, learning_rate = 0.05):
 
         for neuron_index in range(neurons_in_layer):
             # PDs * learning_rate
-            listWithScalarOperation(formatted_learning_rate, partial_derivatives[layer_index][neuron_index], learning_values_list[layer_index][neuron_index],
-                                    '*', nn.numbersFormat)
+            listWithScalarOperation(formatted_learning_rate, partial_derivatives[layer_index][neuron_index],
+                                    learning_values_list[layer_index][neuron_index],'*', nn.numbersFormat)
 
     for layer_index in range(num_of_net_layers - 1, 0, -1):
         neurons_in_layer = len(nn.weightsMatrices[layer_index])

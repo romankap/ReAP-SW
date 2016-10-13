@@ -70,12 +70,12 @@ def loadInput(storage, input_format, input_size, column_index, start_row, genera
 
 
 ############################################################
-######  Forward propagate an input through the net
+######  Feedforward an input through the net
 ############################################################
 def ReLUactivation(input):
     return max(0, input)
 
-def forwardPropagation(nn, input, number_format):
+def feedforward(nn, input):
     print("FP in NN")
 
     num_of_net_layers = len(nn.layers)
@@ -90,7 +90,7 @@ def forwardPropagation(nn, input, number_format):
         for neuron in range(neurons_in_layer):
             sum = 0
             for weight in range(weights_per_neuron):
-                sum += number_format.convert(activations[layer_index-1][weight] * nn.weightsMatrices[layer_index][neuron][weight])
+                sum += nn.numbersFormat.convert(activations[layer_index-1][weight] * nn.weightsMatrices[layer_index][neuron][weight])
             activations[layer_index].append(sum)
 
         if layer_index!=num_of_net_layers-1:
@@ -103,7 +103,7 @@ def forwardPropagation(nn, input, number_format):
 ############################################################
 ######  Backward propagation of an output through the net
 ############################################################
-def backPropagation(nn, activations, target, number_format):
+def backPropagation(nn, activations, target):
     num_of_net_layers = len(nn.layers)
 
     partial_derivatives = [None]
@@ -129,12 +129,12 @@ def backPropagation(nn, activations, target, number_format):
             curr_delta = [0] * weights_in_prev_bp_layer_neuron
             for neuron_in_prev_bp_index in range(neurons_in_prev_bp_layer):
                 temp_delta = [0] * weights_in_prev_bp_layer_neuron
-                listWithScalarOperation(prev_delta[neuron_in_prev_bp_index], nn.weightsMatrices[layer_index+1][neuron_in_prev_bp_index], temp_delta, '*', number_format)
+                listWithScalarOperation(prev_delta[neuron_in_prev_bp_index], nn.weightsMatrices[layer_index+1][neuron_in_prev_bp_index], temp_delta, '*', nn.numbersFormat)
                 listWithListOperation(temp_delta, curr_delta, curr_delta, '+')
 
         for neuron_index in range(neurons_in_layer):
             neuron_pds = [0] * weights_per_neuron
-            listWithScalarOperation(curr_delta[neuron_index], activations[layer_index-1], neuron_pds, '*', number_format)
+            listWithScalarOperation(curr_delta[neuron_index], activations[layer_index-1], neuron_pds, '*', nn.numbersFormat)
             partial_derivatives[layer_index].append(neuron_pds)
 
         prev_delta = curr_delta
@@ -146,7 +146,7 @@ def backPropagation(nn, activations, target, number_format):
 ############################################################
 ######  Backward propagation of an output through the net
 ############################################################
-def update_weights(nn, partial_derivatives, number_format, learning_rate = 0.05):
+def update_weights(nn, partial_derivatives, learning_rate = 0.05):
     num_of_net_layers = len(nn.layers)
     learning_values_list = []
     learning_values_list.extend(partial_derivatives)
@@ -167,7 +167,7 @@ def update_weights(nn, partial_derivatives, number_format, learning_rate = 0.05)
 
             # PDs * learning_rate
             listWithScalarOperation(learning_rate, partial_derivatives[layer_index][neuron_index], learning_values_list[layer_index][neuron_index],
-                                    '*', number_format)
+                                    '*', nn.numbersFormat)
 
             #learning_values_list[layer_index].append(neuron_learning_values)
 
@@ -175,7 +175,7 @@ def update_weights(nn, partial_derivatives, number_format, learning_rate = 0.05)
         neurons_in_layer = len(nn.weightsMatrices[layer_index])
         for neuron_index in range(neurons_in_layer):
             listWithListOperation(nn.weightsMatrices[layer_index][neuron_index], learning_values_list[layer_index][neuron_index],
-                                  nn.weightsMatrices[layer_index][neuron_index], '-', number_format)
+                                  nn.weightsMatrices[layer_index][neuron_index], '-', nn.numbersFormat)
 
 
 

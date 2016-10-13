@@ -13,7 +13,7 @@ import random
 sys.path.append(lib_path)
 import swalign'''
 
-def getReCAMpds(nn, storage, pds_column):
+def get_NN_matrices_from_ReCAM(nn, storage, column):
     ReCAM_pds = [None]
     row_index = 0
 
@@ -25,29 +25,29 @@ def getReCAMpds(nn, storage, pds_column):
             ReCAM_pds[layer_index].append([])
 
             for weight_index in range(weights_per_neuron):
-                ReCAM_pds[layer_index][neuron_index].append(storage.crossbarArray[row_index][pds_column])
+                ReCAM_pds[layer_index][neuron_index].append(storage.crossbarArray[row_index][column])
                 row_index += 1
 
     return ReCAM_pds
 
 
-def compareReCAMandCPUpds(ReCAM_pds, CPU_pds):
+def compare_NN_matrices(ReCAM_matrix, CPU_matrix, type=""):
     index_in_ReCAM = 0
 
-    for layer_index in range(1, len(CPU_pds)):
-        for neuron_index in range(len(CPU_pds[layer_index])):
-            weights_per_neuron = len(CPU_pds[layer_index][0])
+    for layer_index in range(1, len(CPU_matrix)):
+        for neuron_index in range(len(CPU_matrix[layer_index])):
+            weights_per_neuron = len(CPU_matrix[layer_index][0])
 
             for weight_index in range(weights_per_neuron):
                 #if ReCAM_pds[index_in_ReCAM] != CPU_pds[layer_index][neuron_index][weight_index]:
-                if ReCAM_pds[layer_index][neuron_index][weight_index] != CPU_pds[layer_index][neuron_index][weight_index]:
+                if ReCAM_matrix[layer_index][neuron_index][weight_index] != CPU_matrix[layer_index][neuron_index][weight_index]:
                     print("")
                     print("ERROR: Mismatching ReCAM and CPU pds!")
                     print("Index in ReCAM: {}. CPU[{}][{}][{}]".format(index_in_ReCAM, layer_index, neuron_index, weight_index))
 
                 index_in_ReCAM += 1
 
-    print("VVV ReCAM and CPU pds match VVV")
+    print("VVV ReCAM and CPU " + type + " match VVV")
 
 
 def test():
@@ -57,10 +57,9 @@ def test():
 
     input_vector = [1]*(nn_input_size+1)
     target_output = [1, 2]
+    learning_rate = 0.05
 
-    ############################
-    ####       ReCAM        ####
-    ############################
+    #--- ReCAM ---#
     storage = ReCAM.ReCAM(2048)
     storage.setVerbose(False)
 
@@ -76,7 +75,7 @@ def test():
 
     NNs_on_ReCAM.loadTargetOutputToStorage(storage, target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit_precision, nn_weights_column)
 
-    (ReCAM_FP_output, ReCAM_FP_output_col_index) = NNs_on_ReCAM.forwardPropagation(nn, storage, nn_weights_column, nn_start_row, input_column, FP_MUL_column, FP_accumulation_column)
+    (ReCAM_FP_output, ReCAM_FP_output_col_index) = NNs_on_ReCAM.feedforward(nn, storage, nn_weights_column, nn_start_row, input_column, FP_MUL_column, FP_accumulation_column)
 
     BP_output_column = ReCAM_FP_output_col_index
     BP_partial_derivatives_column = FP_MUL_column
@@ -85,25 +84,23 @@ def test():
     BP_next_deltas_column = 5
     NNs_on_ReCAM.backPropagation(nn, storage, nn_start_row, nn_weights_column, BP_output_column, BP_partial_derivatives_column,
                                 activations_column, BP_deltas_column, BP_next_deltas_column)
+    ReCAM_pds = get_NN_matrices_from_ReCAM(nn, storage, BP_partial_derivatives_column)
+    NNs_on_ReCAM.update_weights(nn, storage, nn_start_row, nn_weights_column, BP_partial_derivatives_column, learning_rate)
+    ReCAM_weights = get_NN_matrices_from_ReCAM(nn, storage, nn_weights_column)
     print("Finished ReCAM Execution")
 
-    ####################################
-    ####            CPU             ####
-    ####################################
+    #--- CPU ---#
+
     num_of_net_layers = len(nn.layers)
-    CPU_activations = NNs_on_CPU.forwardPropagation(nn, input_vector, fixed_point_10bit_precision)
-
-    CPU_pds = NNs_on_CPU.backPropagation(nn, CPU_activations, target_output, fixed_point_10bit_precision)
-
-    NNs_on_CPU.update_weights(nn, CPU_pds, fixed_point_10bit_precision, 0.05)
+    CPU_activations = NNs_on_CPU.feedforward(nn, input_vector)
+    CPU_pds = NNs_on_CPU.backPropagation(nn, CPU_activations, target_output)
+    NNs_on_CPU.update_weights(nn, CPU_pds, learning_rate)
     print("Finished CPU Execution")
 
-    ################################################################
-    ####            Verify partial derivatives match            ####
-    ################################################################
-    ReCAM_pds = getReCAMpds(nn, storage, BP_partial_derivatives_column)
+    # --- Verify partial derivatives match ---#
 
-    compareReCAMandCPUpds(ReCAM_pds, CPU_pds)
+    compare_NN_matrices(ReCAM_pds, CPU_pds, "partial derivatives")
+    compare_NN_matrices(ReCAM_weights, nn.weightsMatrices, "weights")
 
 
 

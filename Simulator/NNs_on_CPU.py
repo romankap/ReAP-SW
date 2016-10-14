@@ -16,6 +16,7 @@ Every layer has number of neurons - the net will be presented as a list.
 First (last) layer is input (output) layer.
 '''
 
+
 ################################################
 ####        AUX functions & definitions
 ################################################
@@ -121,7 +122,6 @@ def feedforward(nn, input):
 ############################################################
 def backPropagation(nn, activations, target):
     num_of_net_layers = len(nn.layers)
-
     partial_derivatives = [None]
 
     curr_delta = None
@@ -162,10 +162,13 @@ def backPropagation(nn, activations, target):
 ############################################################
 ######  Backward propagation of an output through the net
 ############################################################
-def update_weights(nn, partial_derivatives, learning_rate = 0.05):
+def update_weights(nn, SGD_weights, partial_derivatives, learning_rate = 0.05):
     num_of_net_layers = len(nn.layers)
     learning_values_list = copy.deepcopy(partial_derivatives)
     formatted_learning_rate = nn.numbersFormat.convert(learning_rate)
+
+    if SGD_weights==[None]:
+        SGD_weights = copy.deepcopy(partial_derivatives)
 
     # Simple Learning Algorithm Steps
     # 1. PDs * learning_rate -> Learning_values_list

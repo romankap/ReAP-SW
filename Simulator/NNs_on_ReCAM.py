@@ -52,6 +52,26 @@ def loadInputToStorage(storage, input_format, input_size, column_index, start_ro
         storage.loadData(input_vector, start_row, input_format.total_bits, column_index)
 
 
+############################################################
+######  Extract NN structure in form of 3D matrices
+############################################################
+def get_NN_matrices(nn, storage, column, start_row):
+    NN_from_ReCAM = [None]
+    row_index = start_row
+
+    for layer_index in range(1, len(nn.layers)):
+        NN_from_ReCAM.append([])
+
+        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+        for neuron_index in range(len(nn.weightsMatrices[layer_index])):
+            NN_from_ReCAM[layer_index].append([])
+
+            for weight_index in range(weights_per_neuron):
+                NN_from_ReCAM[layer_index][neuron_index].append(storage.crossbarArray[row_index][column])
+                row_index += 1
+
+    return NN_from_ReCAM
+
 #####################################################################
 ######      Broadcast a single element to multiple ReCAM rows
 #####################################################################

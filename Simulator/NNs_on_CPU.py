@@ -16,6 +16,19 @@ Every layer has number of neurons - the net will be presented as a list.
 First (last) layer is input (output) layer.
 '''
 
+################################################
+####        AUX functions & definitions
+################################################
+max_operation_string = "max"
+
+def convert_if_needed(result, number_format=None):
+    if number_format:
+        return number_format.convert(result)
+    return result
+
+################################################
+####        NN & List Operations
+################################################
 
 def createFullyConnectNN(weights_format, input_size):
     nn = NeuralNetwork(weights_format, input_size)
@@ -33,22 +46,24 @@ def createFullyConnectNN(weights_format, input_size):
 def listWithListOperation(list_A, list_B, res_list, operation, number_format=None):
     if operation=='-':
         for i in range(len(list_A)):
-            res_list[i] = list_A[i] - list_B[i]
+            res_list[i] = convert_if_needed(list_A[i] - list_B[i], number_format)
     elif operation == '+':
         for i in range(len(list_A)):
-            res_list[i] = list_A[i] + list_B[i]
+            res_list[i] = convert_if_needed(list_A[i] + list_B[i], number_format)
     elif operation == '*':
         for i in range(len(list_A)):
-            res_list[i] = number_format.convert(list_A[i] * list_B[i])
+            res_list[i] = convert_if_needed(list_A[i] * list_B[i], number_format)
 
 
-def listWithScalarOperation(scalar, list_A, res_list, operation, number_format):
+def listWithScalarOperation(scalar, list_A, res_list, operation, number_format=None):
+    converted_scalar = convert_if_needed(scalar, number_format)
+
     if operation == '*':
         for i in range(len(list_A)):
-            res_list[i] = number_format.convert(scalar * list_A[i])
+            res_list[i] = convert_if_needed(converted_scalar * list_A[i], number_format)
     elif operation == '+':
         for i in range(len(list_A)):
-            res_list[i] = number_format.convert(scalar + list_A[i])
+            res_list[i] = convert_if_needed(converted_scalar + list_A[i], number_format)
 
 
 ############################################################
@@ -88,10 +103,11 @@ def feedforward(nn, input):
         weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
 
         for neuron in range(neurons_in_layer):
-            sum = 0
+            weighted_sum = 0
             for weight in range(weights_per_neuron):
-                sum += nn.numbersFormat.convert(activations[layer_index-1][weight] * nn.weightsMatrices[layer_index][neuron][weight])
-            activations[layer_index].append(sum)
+                weighted_sum = nn.numbersFormat.convert(weighted_sum +
+                                                        nn.numbersFormat.convert(activations[layer_index-1][weight] * nn.weightsMatrices[layer_index][neuron][weight]))
+            activations[layer_index].append(weighted_sum)
 
         if layer_index!=num_of_net_layers-1:
             activations[layer_index].append(1) #bias exists only in input+hidden layers

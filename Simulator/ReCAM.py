@@ -251,7 +251,7 @@ class ReCAM:
     # Simple variable-constant arithmetic  - Add / Subtract
     def rowWiseOperationWithConstant(self, colA, const_scalar, res_col, start_row, end_row, operation, number_format=None):
         max_operation_string = "max"
-        converted_scalar = number_format.convert(const_scalar) if number_format!=None else const_scalar
+        converted_scalar = convert_if_needed(const_scalar, number_format)
 
         if operation == '+':
             for i in range(start_row, end_row+1):
@@ -284,13 +284,9 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
-    def MULConsecutiveRows(self, start_row, end_row, colRes, colA, colB, numbersFormat=None):
+    def MULConsecutiveRows(self, start_row, end_row, colRes, colA, colB, number_format=None):
         for i in range(start_row, end_row+1):
-            if not numbersFormat:
-                self.crossbarArray[i][colRes] = self.crossbarArray[i][colA] * self.crossbarArray[i][colB]
-            else:
-                self.crossbarArray[i][colRes] = numbersFormat.convert(self.crossbarArray[i][colA] *
-                                                                     self.crossbarArray[i][colB])
+            self.crossbarArray[i][colRes] = convert_if_needed(self.crossbarArray[i][colA] * self.crossbarArray[i][colB], number_format)
 
         if self.verbose:
             self.printArray(msg="MULConsecutiveRows")
@@ -301,13 +297,9 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
-    def MULTaggedRows(self, tagged_rows_list, colRes, colA, colB, numbersFormat=None):
+    def MULTaggedRows(self, tagged_rows_list, colRes, colA, colB, number_format=None):
         for row_num in tagged_rows_list:
-            if not numbersFormat:
-                self.crossbarArray[row_num][colRes] = self.crossbarArray[row_num][colA] * self.crossbarArray[row_num][colB]
-            else:
-                self.crossbarArray[row_num][colRes] = numbersFormat.convert(self.crossbarArray[row_num][colA] *
-                                                                            self.crossbarArray[row_num][colB])
+            self.crossbarArray[row_num][colRes] = convert_if_needed(self.crossbarArray[row_num][colA] * self.crossbarArray[row_num][colB], number_format)
 
         if self.verbose:
             self.printArray()

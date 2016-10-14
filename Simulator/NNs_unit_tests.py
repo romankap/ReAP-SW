@@ -13,24 +13,6 @@ import random
 sys.path.append(lib_path)
 import swalign'''
 
-def get_NN_matrices_from_ReCAM(nn, storage, column):
-    ReCAM_pds = [None]
-    row_index = 0
-
-    for layer_index in range(1, len(nn.layers)):
-        ReCAM_pds.append([])
-
-        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
-        for neuron_index in range(len(nn.weightsMatrices[layer_index])):
-            ReCAM_pds[layer_index].append([])
-
-            for weight_index in range(weights_per_neuron):
-                ReCAM_pds[layer_index][neuron_index].append(storage.crossbarArray[row_index][column])
-                row_index += 1
-
-    return ReCAM_pds
-
-
 def compare_NN_matrices(ReCAM_matrix, CPU_matrix, type=""):
     index_in_ReCAM = 0
 
@@ -42,8 +24,8 @@ def compare_NN_matrices(ReCAM_matrix, CPU_matrix, type=""):
                 #if ReCAM_pds[index_in_ReCAM] != CPU_pds[layer_index][neuron_index][weight_index]:
                 if ReCAM_matrix[layer_index][neuron_index][weight_index] != CPU_matrix[layer_index][neuron_index][weight_index]:
                     print("")
-                    print("ERROR: Mismatching ReCAM and CPU", type, "!")
                     print("Index in ReCAM: {}. CPU[{}][{}][{}]".format(index_in_ReCAM, layer_index, neuron_index, weight_index))
+                    exit("ERROR: Mismatching ReCAM and CPU " +  type + "!")
 
                 index_in_ReCAM += 1
 
@@ -55,9 +37,10 @@ def test():
     fixed_point_10bit_precision = FixedPoint.FixedPointFormat(6,10)
     nn = NeuralNetwork.createDemoFullyConnectNN(fixed_point_10bit_precision, nn_input_size)
 
-    input_vector = [1]*(nn_input_size+1)
+    input_vector = [3]*(nn_input_size+1)
+    input_vector[nn_input_size] = 1 #bias value
     target_output = [1, 2]
-    learning_rate = 0.05
+    learning_rate = 0.02
 
     #--- ReCAM ---#
     storage = ReCAM.ReCAM(2048)
@@ -72,7 +55,7 @@ def test():
     FP_accumulation_column = 3
     input_start_row = nn_start_row
 
-    for training_iteration in range(100):
+    for training_iteration in range(10000):
         NNs_on_ReCAM.loadInputToStorage(storage, fixed_point_10bit_precision, nn_input_size, input_column, input_start_row, input_vector)
 
         NNs_on_ReCAM.loadTargetOutputToStorage(storage, target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit_precision, nn_weights_column)
@@ -86,9 +69,10 @@ def test():
         BP_next_deltas_column = 5
         NNs_on_ReCAM.backPropagation(nn, storage, nn_start_row, nn_weights_column, BP_output_column, BP_partial_derivatives_column,
                                     activations_column, BP_deltas_column, BP_next_deltas_column)
-        ReCAM_pds = get_NN_matrices_from_ReCAM(nn, storage, BP_partial_derivatives_column)
-        NNs_on_ReCAM.update_weights(nn, storage, nn_start_row, nn_weights_column, BP_partial_derivatives_column, learning_rate)
-        ReCAM_weights = get_NN_matrices_from_ReCAM(nn, storage, nn_weights_column)
+        ReCAM_pds = NNs_on_ReCAM.get_NN_matrices(nn, storage, BP_partial_derivatives_column, nn_start_row)
+
+        ##NNs_on_ReCAM.update_weights(nn, storage, nn_start_row, nn_weights_column, BP_partial_derivatives_column, learning_rate)
+        ReCAM_weights = NNs_on_ReCAM.get_NN_matrices(nn, storage, nn_weights_column, nn_start_row)
         print("Finished ReCAM Execution", training_iteration)
 
         #--- CPU ---#
@@ -96,13 +80,13 @@ def test():
         num_of_net_layers = len(nn.layers)
         CPU_activations = NNs_on_CPU.feedforward(nn, input_vector)
         CPU_pds = NNs_on_CPU.backPropagation(nn, CPU_activations, target_output)
-        NNs_on_CPU.update_weights(nn, CPU_pds, learning_rate)
+        ##NNs_on_CPU.update_weights(nn, CPU_pds, learning_rate)
         print("Finished CPU Execution", training_iteration)
 
         # --- Verify partial derivatives match ---#
 
         compare_NN_matrices(ReCAM_pds, CPU_pds, "partial derivatives")
-        compare_NN_matrices(ReCAM_weights, nn.weightsMatrices, "weights")
+        ##compare_NN_matrices(ReCAM_weights, nn.weightsMatrices, "weights")
 
 
 

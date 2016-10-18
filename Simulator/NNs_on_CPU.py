@@ -27,23 +27,6 @@ def convert_if_needed(result, number_format=None):
         return number_format.convert(result)
     return result
 
-################################################
-####        NN & List Operations
-################################################
-
-def createFullyConnectNN(weights_format, input_size):
-    nn = NeuralNetwork(weights_format, input_size)
-    print("input layer size =", nn.layers[0])
-
-    nn.addLayer("FC", 3)
-    print("Added FC layer, size =", nn.layers[1])
-
-    nn.addLayer("output", 2)
-    print("Added output layer, size =", nn.layers[2])
-
-    return nn
-
-
 def listWithListOperation(list_A, list_B, res_list, operation, number_format=None):
     if operation=='-':
         for i in range(len(list_A)):
@@ -67,129 +50,141 @@ def listWithScalarOperation(scalar, list_A, res_list, operation, number_format=N
             res_list[i] = convert_if_needed(converted_scalar + list_A[i], number_format)
 
 
-############################################################
-######  Load Input to ReCAM (read from file / generate)
-############################################################
-def loadInput(storage, input_format, input_size, column_index, start_row, generate_random_input=True):
-    input_vector = []
-
-    if generate_random_input:
-        for i in range(input_size):
-            input_vector.append(input_format.convert(random.uniform(0.0001, 1)))
-        #bias
-        input_vector.append(1)
-    else:
-        print("Loading input from HD isn't supported yet")
-        #Bias should be added manually (either here or in FP function)
-
-    storage.loadData(input_vector, start_row, input_format.total_bits, column_index)
-
-
-############################################################
-######  Feedforward an input through the net
-############################################################
 def ReLUactivation(input):
     return max(0, input)
 
-def feedforward(nn, input):
-    print("FP in NN")
+################################################
+####        NN & List Operations
+################################################
 
-    num_of_net_layers = len(nn.layers)
-    activations = []
-    activations.append(input)
+def initialize_NN_on_CPU(numbers_format):
+    NN_on_CPU = CPU_NN_Manager(numbers_format)
 
-    for layer_index in range(1, num_of_net_layers):
-        activations.append([])
-        neurons_in_layer = len(nn.weightsMatrices[layer_index])
-        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+    return NN_on_CPU
 
-        for neuron in range(neurons_in_layer):
-            weighted_sum = 0
-            for weight in range(weights_per_neuron):
-                weighted_sum = nn.numbersFormat.convert(weighted_sum +
-                                                        nn.numbersFormat.convert(activations[layer_index-1][weight] * nn.weightsMatrices[layer_index][neuron][weight]))
-            activations[layer_index].append(weighted_sum)
+class CPU_NN_Manager:
+    def __init__(self, numbers_format):
+        self.numbersFormat = numbers_format
+        self.SGD_mini_batch_size = 0
+        self.learning_rate = 0.01
+        self.SGD_weights = []
+        self.samples_learned = 0
+        self.epochs = 0
+        self.samples_in_dataset = 0
 
-        if layer_index!=num_of_net_layers-1:
-            activations[layer_index].append(1) #bias exists only in input+hidden layers
+    def set_learning_rate(self, new_learning_rate):
+        self.learning_rate = new_learning_rate
 
-    #print(net_output)
-    return activations
+    def set_SGD_parameters(self, nn, mini_batch_size, new_learning_rate):
+        self.SGD_mini_batch_size = mini_batch_size
+        self.learning_rate = new_learning_rate
+        self.SGD_weights = copy.deepcopy(nn.weightsMatrices)
 
+    ############################################################
+    ######  Feedforward an input through the net
+    ############################################################
+    def feedforward(self, nn, input):
+        print("FP in NN")
 
-############################################################
-######  Backward propagation of an output through the net
-############################################################
-def backPropagation(nn, activations, target):
-    num_of_net_layers = len(nn.layers)
-    partial_derivatives = [None]
+        num_of_net_layers = len(nn.layers)
+        activations = []
+        activations.append(input)
 
-    curr_delta = None
-    prev_delta = None
-    for layer_index in range(num_of_net_layers-1):
-        partial_derivatives.append([])
+        for layer_index in range(1, num_of_net_layers):
+            activations.append([])
+            neurons_in_layer = len(nn.weightsMatrices[layer_index])
+            weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
 
-    for layer_index in range(num_of_net_layers-1, 0, -1):
-        neurons_in_layer = len(nn.weightsMatrices[layer_index])
-        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+            for neuron in range(neurons_in_layer):
+                weighted_sum = 0
+                for weight in range(weights_per_neuron):
+                    weighted_sum = nn.numbersFormat.convert(weighted_sum +
+                                                            nn.numbersFormat.convert(activations[layer_index-1][weight] * nn.weightsMatrices[layer_index][neuron][weight]))
+                activations[layer_index].append(weighted_sum)
 
-        # Deltas of output layer
-        if layer_index==num_of_net_layers-1:
-            curr_delta = [0] * len(activations[num_of_net_layers - 1])
-            listWithListOperation(activations[num_of_net_layers - 1], target, curr_delta, '-', nn.numbersFormat)
-        # Deltas of hidden layers
-        else:
-            neurons_in_prev_bp_layer = len(nn.weightsMatrices[layer_index+1])
-            weights_in_prev_bp_layer_neuron = len(nn.weightsMatrices[layer_index+1][0])
+            if layer_index!=num_of_net_layers-1:
+                activations[layer_index].append(1) #bias exists only in input+hidden layers
 
-            curr_delta = [0] * weights_in_prev_bp_layer_neuron
-            for neuron_in_prev_bp_index in range(neurons_in_prev_bp_layer):
-                temp_delta = [0] * weights_in_prev_bp_layer_neuron
-                listWithScalarOperation(prev_delta[neuron_in_prev_bp_index], nn.weightsMatrices[layer_index+1][neuron_in_prev_bp_index], temp_delta, '*', nn.numbersFormat)
-                listWithListOperation(temp_delta, curr_delta, curr_delta, '+', nn.numbersFormat)
+        #print(net_output)
+        return activations
 
-        for neuron_index in range(neurons_in_layer):
-            neuron_pds = [0] * weights_per_neuron
-            listWithScalarOperation(curr_delta[neuron_index], activations[layer_index-1], neuron_pds, '*', nn.numbersFormat)
-            partial_derivatives[layer_index].append(neuron_pds)
+    ############################################################
+    ######  Backward propagation of an output through the net
+    ############################################################
+    def backPropagation(self, nn, activations, target):
+        num_of_net_layers = len(nn.layers)
+        partial_derivatives = [None]
 
-        prev_delta = curr_delta
+        curr_delta = None
+        prev_delta = None
+        for layer_index in range(num_of_net_layers-1):
+            partial_derivatives.append([])
 
-    print("Finished BP in NN on CPU")
-    return partial_derivatives
+        for layer_index in range(num_of_net_layers-1, 0, -1):
+            neurons_in_layer = len(nn.weightsMatrices[layer_index])
+            weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
 
+            # Deltas of output layer
+            if layer_index==num_of_net_layers-1:
+                curr_delta = [0] * len(activations[num_of_net_layers - 1])
+                listWithListOperation(activations[num_of_net_layers - 1], target, curr_delta, '-', nn.numbersFormat)
+            # Deltas of hidden layers
+            else:
+                neurons_in_prev_bp_layer = len(nn.weightsMatrices[layer_index+1])
+                weights_in_prev_bp_layer_neuron = len(nn.weightsMatrices[layer_index+1][0])
 
-############################################################
-######  Backward propagation of an output through the net
-############################################################
-def update_weights(nn, SGD_weights, partial_derivatives, learning_rate = 0.05):
-    num_of_net_layers = len(nn.layers)
-    learning_values_list = copy.deepcopy(partial_derivatives)
-    formatted_learning_rate = nn.numbersFormat.convert(learning_rate)
+                curr_delta = [0] * weights_in_prev_bp_layer_neuron
+                for neuron_in_prev_bp_index in range(neurons_in_prev_bp_layer):
+                    temp_delta = [0] * weights_in_prev_bp_layer_neuron
+                    listWithScalarOperation(prev_delta[neuron_in_prev_bp_index], nn.weightsMatrices[layer_index+1][neuron_in_prev_bp_index], temp_delta, '*', nn.numbersFormat)
+                    listWithListOperation(temp_delta, curr_delta, curr_delta, '+', nn.numbersFormat)
 
-    if SGD_weights==[None]:
-        SGD_weights = copy.deepcopy(partial_derivatives)
+            for neuron_index in range(neurons_in_layer):
+                neuron_pds = [0] * weights_per_neuron
+                listWithScalarOperation(curr_delta[neuron_index], activations[layer_index-1], neuron_pds, '*', nn.numbersFormat)
+                partial_derivatives[layer_index].append(neuron_pds)
 
-    # Simple Learning Algorithm Steps
-    # 1. PDs * learning_rate -> Learning_values_list
-    # 2. Update net weights with Learning_values_list
-    # 3. LATER: modify to implement SGD (define a mini-batch size and accumulate)
+            prev_delta = curr_delta
 
-    for layer_index in range(num_of_net_layers-1, 0, -1):
-        neurons_in_layer = len(nn.weightsMatrices[layer_index])
-        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+        print("Finished BP in NN on CPU")
+        return partial_derivatives
 
-        for neuron_index in range(neurons_in_layer):
-            # PDs * learning_rate
-            listWithScalarOperation(formatted_learning_rate, partial_derivatives[layer_index][neuron_index],
-                                    learning_values_list[layer_index][neuron_index],'*', nn.numbersFormat)
+    ############################################################
+    ######  Backward propagation of an output through the net
+    ############################################################
+    def SGD_train(self, nn, NN_input, target_output):
+        activations = self.feedforward(nn, NN_input)
+        partial_derivatives = self.backPropagation(nn, activations, target_output)
+        num_of_net_layers = len(nn.layers)
+        formatted_learning_rate = nn.numbersFormat.convert(self.learning_rate)
 
-    for layer_index in range(num_of_net_layers - 1, 0, -1):
-        neurons_in_layer = len(nn.weightsMatrices[layer_index])
-        for neuron_index in range(neurons_in_layer):
-            listWithListOperation(nn.weightsMatrices[layer_index][neuron_index], learning_values_list[layer_index][neuron_index],
-                                  nn.weightsMatrices[layer_index][neuron_index], '-', nn.numbersFormat)
+        # Simple Learning Algorithm Steps
+        # 1. PDs * learning_rate -> Learning_values_list
+        # 2. Update net weights with Learning_values_list
+        # 3. LATER: modify to implement SGD (define a mini-batch size and accumulate)
 
+        for layer_index in range(num_of_net_layers-1, 0, -1):
+            neurons_in_layer = len(nn.weightsMatrices[layer_index])
+            weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+
+            for neuron_index in range(neurons_in_layer):
+                # PDs * learning_rate
+                if self.samples_learned % self.SGD_mini_batch_size == 0: # First sample in mini-batch
+                    listWithScalarOperation(formatted_learning_rate, partial_derivatives[layer_index][neuron_index],
+                                            self.SGD_weights[layer_index][neuron_index], '*', nn.numbersFormat)
+                else:   # NOT First sample in mini-batch, should accumulate gradients
+                    listWithScalarOperation(formatted_learning_rate, partial_derivatives[layer_index][neuron_index],
+                                            partial_derivatives[layer_index][neuron_index], '*', nn.numbersFormat)
+                    listWithListOperation(self.SGD_weights[layer_index][neuron_index], partial_derivatives[layer_index][neuron_index],
+                                          self.SGD_weights[layer_index][neuron_index], '+', nn.numbersFormat)
+        self.samples_learned += 1
+
+        if self.samples_learned % self.SGD_mini_batch_size == 0:  # A complete mini-batch was accumulated -> update NN weights
+            for layer_index in range(num_of_net_layers - 1, 0, -1):
+                neurons_in_layer = len(nn.weightsMatrices[layer_index])
+                for neuron_index in range(neurons_in_layer):
+                    listWithListOperation(nn.weightsMatrices[layer_index][neuron_index], self.SGD_weights[layer_index][neuron_index],
+                                          nn.weightsMatrices[layer_index][neuron_index], '-', nn.numbersFormat)
 
 
 ############################################################
@@ -198,7 +193,6 @@ def update_weights(nn, SGD_weights, partial_derivatives, learning_rate = 0.05):
 def test():
     nn_input_size = 3 # actual input length will be +1 due to bias
     fixed_point_10bit = FixedPoint.FixedPointFormat(6,10)
-    nn = createFullyConnectNN(fixed_point_10bit, nn_input_size)
 
     # 1. Read Input
 

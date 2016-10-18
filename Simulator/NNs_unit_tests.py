@@ -36,11 +36,16 @@ def test():
     nn_input_size = 3 # actual input length will be +1 due to bias
     fixed_point_10bit_precision = FixedPoint.FixedPointFormat(6,10)
     nn = NeuralNetwork.createDemoFullyConnectNN(fixed_point_10bit_precision, nn_input_size)
+    NN_on_CPU = NNs_on_CPU.initialize_NN_on_CPU(fixed_point_10bit_precision)
 
     input_vector = [3]*(nn_input_size+1)
     input_vector[nn_input_size] = 1 #bias value
     target_output = [1, 2]
     learning_rate = 0.02
+    mini_batch_size = 2
+
+    # --- CPU ---#
+    NN_on_CPU.set_SGD_parameters(nn, mini_batch_size, learning_rate)
 
     #--- ReCAM ---#
     storage = ReCAM.ReCAM(2048)
@@ -59,7 +64,8 @@ def test():
     input_start_row = nn_start_row
     CPU_SGD_weights = [None]
 
-    for training_iteration in range(2):
+    for training_iteration in range(1):
+        #--- ReCAM ---#
         NNs_on_ReCAM.loadInputToStorage(storage, fixed_point_10bit_precision, nn_input_size, input_column, input_start_row, input_vector)
 
         NNs_on_ReCAM.loadTargetOutputToStorage(storage, target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit_precision, nn_weights_column)
@@ -79,20 +85,14 @@ def test():
         print("Finished ReCAM Execution", training_iteration)
 
         #--- CPU ---#
-
-        num_of_net_layers = len(nn.layers)
-        CPU_activations = NNs_on_CPU.feedforward(nn, input_vector)
-        CPU_pds = NNs_on_CPU.backPropagation(nn, CPU_activations, target_output)
-        NNs_on_CPU.update_weights(nn, CPU_SGD_weights, CPU_pds, learning_rate)
+        NN_on_CPU.SGD_train(nn, input_vector, target_output)
 
         print(CPU_SGD_weights)
         print("Finished CPU Execution", training_iteration)
 
-        # --- Verify partial derivatives match ---#
-
-        compare_NN_matrices(ReCAM_pds, CPU_pds, "partial derivatives")
+        # --- Verify weights match ---#
         compare_NN_matrices(ReCAM_weights, nn.weightsMatrices, "weights")
-        storage.printArray()
+        #storage.printArray()
 
 
 #################################

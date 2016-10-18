@@ -68,7 +68,7 @@ class CPU_NN_Manager:
         self.SGD_mini_batch_size = 0
         self.learning_rate = 0.01
         self.SGD_weights = []
-        self.samples_learned = 0
+        self.samples_trained = 0
         self.epochs = 0
         self.samples_in_dataset = 0
 
@@ -169,7 +169,7 @@ class CPU_NN_Manager:
 
             for neuron_index in range(neurons_in_layer):
                 # PDs * learning_rate
-                if self.samples_learned % self.SGD_mini_batch_size == 0: # First sample in mini-batch
+                if self.samples_trained % self.SGD_mini_batch_size == 0: # First sample in mini-batch
                     listWithScalarOperation(formatted_learning_rate, partial_derivatives[layer_index][neuron_index],
                                             self.SGD_weights[layer_index][neuron_index], '*', nn.numbersFormat)
                 else:   # NOT First sample in mini-batch, should accumulate gradients
@@ -177,9 +177,9 @@ class CPU_NN_Manager:
                                             partial_derivatives[layer_index][neuron_index], '*', nn.numbersFormat)
                     listWithListOperation(self.SGD_weights[layer_index][neuron_index], partial_derivatives[layer_index][neuron_index],
                                           self.SGD_weights[layer_index][neuron_index], '+', nn.numbersFormat)
-        self.samples_learned += 1
+        self.samples_trained += 1
 
-        if self.samples_learned % self.SGD_mini_batch_size == 0:  # A complete mini-batch was accumulated -> update NN weights
+        if self.samples_trained % self.SGD_mini_batch_size == 0:  # A complete mini-batch was accumulated -> update NN weights
             for layer_index in range(num_of_net_layers - 1, 0, -1):
                 neurons_in_layer = len(nn.weightsMatrices[layer_index])
                 for neuron_index in range(neurons_in_layer):

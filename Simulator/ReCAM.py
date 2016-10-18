@@ -200,7 +200,7 @@ class ReCAM:
 
         elif operation == max_operation_string:
             for i in range(start_row, end_row + 1):
-                self.crossbarArray[i][res_col] = max(self.crossbarArray[i][colA], self.crossbarArray[i][colB])
+                self.crossbarArray[i][res_col] = convert_if_needed(max(self.crossbarArray[i][colA], self.crossbarArray[i][colB]), number_format)
         else:
             print("!!! Unknown Operation !!!")
             return
@@ -240,7 +240,7 @@ class ReCAM:
 
         elif operation == max_operation_string:
             for i in tagged_rows_list:
-                self.crossbarArray[i][res_col] = max(self.crossbarArray[i][colA], self.crossbarArray[i][colB])
+                self.crossbarArray[i][res_col] = convert_if_needed(max(self.crossbarArray[i][colA], self.crossbarArray[i][colB]), number_format)
         else:
             print("!!! Unknown Operation !!!")
             return

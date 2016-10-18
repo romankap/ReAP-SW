@@ -16,253 +16,300 @@ Every layer has number of neurons - the net will be presented as a list.
 First (last) layer is input (output) layer.
 '''
 
+def initialize_NN_on_ReCAM():
+    NN_on_ReCAM = ReCAM_NN_Manager()
 
-############################################################
-######  Load NN to ReCAM
-############################################################
-def loadNNtoStorage(storage, nn, column_index, nn_start_row_in_ReCAM):
-    nn_row_in_ReCAM = nn_start_row_in_ReCAM
+    return NN_on_ReCAM
 
-    for layer_index in range(1, len(nn.layers)):
-        neurons_in_layer = len(nn.weightsMatrices[layer_index])
-        weights_in_layer = len(nn.weightsMatrices[layer_index][0])
+class ReCAM_NN_Manager:
+    def __init__(self):
+        self.storage = ReCAM.ReCAM(2048)
+        self.storage.setVerbose(False)
 
-        for neuron_index in range(neurons_in_layer):
-            storage.loadData(nn.weightsMatrices[layer_index][neuron_index], nn_row_in_ReCAM, nn.numbersFormat.total_bits, column_index)
-            nn_row_in_ReCAM += weights_in_layer
+        self.nn_start_row = 0
+        self.nn_weights_column = 0
 
-    storage.printArray()
+        self.input_column = 1
+        self.FP_MUL_column = 2
+        self.FP_accumulation_column = 3
+        self.activations_column = 0
+        self.BP_deltas_column = 4
+        self.BP_next_deltas_column = 5
+        self.BP_output_column = 0
+        self.BP_partial_derivatives_column = 0
 
+        self.SGD_mini_batch_size = 0
+        self.learning_rate = 0.01
+        self.samples_trained = 0
+        self.epochs = 0
+        self.samples_in_dataset = 0
 
-############################################################
-######  Load Input to ReCAM (read from file / generate)
-############################################################
-def loadInputToStorage(storage, input_format, input_size, column_index, start_row, input_vector=None):
-    if not input_vector:
-        random_input_vector = []
-        for i in range(input_size):
-            random_input_vector.append(input_format.convert(random.uniform(0.0001, 1)))
-        #bias
-            random_input_vector.append(1)
-        storage.loadData(random_input_vector, start_row, input_format.total_bits, column_index)
+    def set_SGD_parameters(self, mini_batch_size, new_learning_rate):
+        self.SGD_mini_batch_size = mini_batch_size
+        self.learning_rate = new_learning_rate
 
-    else:
-        print("Loading input from input_vector")
-        #Bias should be added manually (either here or in FP function)
-        storage.loadData(input_vector, start_row, input_format.total_bits, column_index)
+    ############################################################
+    ######  Load NN to ReCAM
+    ############################################################
+    def loadNNtoStorage(self, nn, weights_column, nn_start_row):
+        self.nn_weights_column = weights_column
+        self.nn_start_row = nn_start_row
+        nn_row_in_ReCAM = self.nn_start_row
 
+        for layer_index in range(1, len(nn.layers)):
+            neurons_in_layer = len(nn.weightsMatrices[layer_index])
+            weights_in_layer = len(nn.weightsMatrices[layer_index][0])
 
-############################################################
-######  Extract NN structure in form of 3D matrices
-############################################################
-def get_NN_matrices(nn, storage, column, start_row):
-    NN_from_ReCAM = [None]
-    row_index = start_row
+            for neuron_index in range(neurons_in_layer):
+                self.storage.loadData(nn.weightsMatrices[layer_index][neuron_index], nn_row_in_ReCAM, nn.numbersFormat.total_bits, self.nn_weights_column)
+                nn_row_in_ReCAM += weights_in_layer
 
-    for layer_index in range(1, len(nn.layers)):
-        NN_from_ReCAM.append([])
-
-        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
-        for neuron_index in range(len(nn.weightsMatrices[layer_index])):
-            NN_from_ReCAM[layer_index].append([])
-
-            for weight_index in range(weights_per_neuron):
-                NN_from_ReCAM[layer_index][neuron_index].append(storage.crossbarArray[row_index][column])
-                row_index += 1
-
-    return NN_from_ReCAM
-
-#####################################################################
-######      Broadcast a single element to multiple ReCAM rows
-#####################################################################
-def loadTargetOutputToStorage(storage, target_output, start_row, number_format, column_index):
-    storage.loadData(target_output, start_row, number_format.total_bits, column_index)
+        self.storage.printArray()
 
 
-#####################################################################
-######      Broadcast a single element to multiple ReCAM rows
-#####################################################################
-def broadcastData(storage, data_col_index, data_start_row_index, data_length,
-                  destination_start_row, destination_row_hops, destination_col_index, destination_delta, destination_rows_per_element):
+    ############################################################
+    ######  Load Input to ReCAM (read from file / generate)
+    ############################################################
+    def loadInputToStorage(self, input_format, input_size, input_column, input_start_row, input_vector=None):
+        self.input_column = input_column
 
-    destination_row = destination_start_row
-    for data_row in range(data_start_row_index, data_start_row_index + data_length):
-        storage.broadcastDataElement(data_col_index, data_row,  destination_row,
-                                     destination_col_index, destination_delta, destination_rows_per_element)
-        destination_row += destination_row_hops
+        if not input_vector:
+            random_input_vector = []
+            for i in range(input_size):
+                random_input_vector.append(input_format.convert(random.uniform(0.0001, 1)))
+            #bias
+                random_input_vector.append(1)
+            self.storage.loadData(random_input_vector, input_start_row, input_format.total_bits, self.input_column)
 
-        # cycle count is set by broadcastDataElement()
-
-
-#####################################################################
-######      Accumulate multiple sums in parallel, row-by-row
-#####################################################################
-def parallelAccumulate(storage, col_A, col_B, res_col, start_row, rows_delta,
-                       num_of_parallel_sums, num_of_accumulations_per_sum, number_format):
-    #first iteration - only accumulate
-    tagged_rows = range(start_row, start_row + num_of_parallel_sums*rows_delta, rows_delta)
-    storage.taggedRowWiseOperation(col_A, col_B, res_col, tagged_rows, '+', number_format)
-
-    start_row_to_accumulate = start_row
-    for i in range(1, num_of_accumulations_per_sum):
-        storage.tagRows(res_col)
-        tagged_rows = range(start_row_to_accumulate, start_row_to_accumulate + num_of_parallel_sums*rows_delta, rows_delta)
-        storage.shiftColumnOnTaggedRows(res_col, tagged_rows, distance_to_shift=1) #shift to higher-indexed rows
-
-        start_row_to_accumulate = start_row + i
-        storage.tagRows(res_col)
-        tagged_rows = range(start_row_to_accumulate, start_row_to_accumulate + num_of_parallel_sums*rows_delta, rows_delta)
-        storage.taggedRowWiseOperation(col_A, col_B, res_col, tagged_rows, '+', number_format)
-
-    for i in range(1, num_of_parallel_sums+1):
-        storage.tagRows(res_col)
-        accumulation_result_row = start_row + i*num_of_accumulations_per_sum - 1
-        final_output_destination_row = start_row + num_of_parallel_sums*num_of_accumulations_per_sum + i-1
-        storage.broadcastDataElement(res_col, accumulation_result_row, final_output_destination_row, res_col, 0, 1)
+        else:
+            print("Loading input from input_vector")
+            #Bias should be added manually (either here or in FP function)
+            self.storage.loadData(input_vector, input_start_row, input_format.total_bits, self.input_column)
 
 
-############################################################
-######  Feedforward an input through the net
-############################################################
-def feedforward(nn, storage, nn_weights_column, nn_start_row, input_column, MUL_column, accumulation_column):
-    bias = [1]
-    number_of_nn_layers = len(nn.layers)
-    start_row = nn_start_row
-    activations_col = input_column
-    MUL_result_col = MUL_column
-    ACC_result_col = accumulation_column
+    ############################################################
+    ######  Extract NN structure in form of 3D matrices
+    ############################################################
+    def get_NN_matrices(self, nn, column, start_row):
+        NN_from_ReCAM = [None]
+        row_index = start_row
 
-    table_header_row = ["NN", "input", "MUL", "ACC"]
-    storage.setPrintHeader(table_header_row)
+        for layer_index in range(1, len(nn.layers)):
+            NN_from_ReCAM.append([])
 
-    for layer_index in range(1, number_of_nn_layers):
-        neurons_in_layer = len(nn.weightsMatrices[layer_index])
-        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
-        layer_total_weights = neurons_in_layer * weights_per_neuron
-        zero_vector = [0] * layer_total_weights
+            weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+            for neuron_index in range(len(nn.weightsMatrices[layer_index])):
+                NN_from_ReCAM[layer_index].append([])
 
-        if storage.verbose:
-            storage.printArray(msg=("beginning of feedforward iteration, layer " + str(layer_index)))
-        # 1) Broadcast
-        #Load bias
-        activations_from_prev_layer = nn.layers[layer_index - 1][1]
-        storage.loadData(bias, start_row + activations_from_prev_layer, nn.numbersFormat.total_bits, activations_col)
+                for weight_index in range(weights_per_neuron):
+                    NN_from_ReCAM[layer_index][neuron_index].append(self.storage.crossbarArray[row_index][column])
+                    row_index += 1
 
-        broadcast_start_row = start_row + weights_per_neuron # first instance of input is aligned with first neuron weights
-        broadcastData(storage, activations_col, start_row, weights_per_neuron,
-                      broadcast_start_row, 1, activations_col, weights_per_neuron, neurons_in_layer-1) #first appearance of input is already aligned with first neuron weights
+        return NN_from_ReCAM
 
-        if storage.verbose:
-            storage.printArray(msg="after broadcast")
-
-        # 2) MUL
-        hidden_layer_start_row = start_row
-
-        storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, MUL_result_col)
-        storage.MULConsecutiveRows(start_row, start_row + layer_total_weights-1, MUL_result_col, nn_weights_column, activations_col, nn.numbersFormat)
-
-        if storage.verbose:
-            storage.printArray(msg="after MUL")
-
-        # 3) Accumulate
-
-        storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, ACC_result_col)
-
-        parallelAccumulate(storage, MUL_result_col, ACC_result_col, ACC_result_col,
-                           start_row, weights_per_neuron,
-                           neurons_in_layer, weights_per_neuron, nn.numbersFormat)
-
-        start_row += layer_total_weights
-        activations_col, ACC_result_col = ACC_result_col, activations_col
-
-        if storage.verbose:
-            storage.printArray(msg="after Accumulate")
-
-    output_col = activations_col #after each iteration, activations_col holds layer output
-    net_output = []
-    for i in range(nn.layers[number_of_nn_layers-1][1]):
-        net_output.append(storage.crossbarArray[start_row+i][output_col])
-    print("")
-    print("=== NN output is: ", net_output)
-
-    return (net_output, output_col)
+    #####################################################################
+    ######      Broadcast a single element to multiple ReCAM rows
+    #####################################################################
+    def loadTargetOutputToStorage(self, target_output, start_row, number_format):
+        self.storage.loadData(target_output, start_row, number_format.total_bits, self.nn_weights_column)
 
 
-############################################################
-######  Backward propagation of an output through the net
-############################################################
-def backPropagation(nn, storage, nn_start_row, nn_weights_column, output_col, partial_derivatives_col,
-                    activations_col, deltas_col, next_deltas_col):
-    print("BP in NN")
+    #####################################################################
+    ######      Accumulate multiple sums in parallel, row-by-row
+    #####################################################################
+    def parallelAccumulate(self, col_A, col_B, res_col, start_row, rows_delta,
+                           num_of_parallel_sums, num_of_accumulations_per_sum, number_format):
+        #first iteration - only accumulate
+        tagged_rows = range(start_row, start_row + num_of_parallel_sums*rows_delta, rows_delta)
+        self.storage.taggedRowWiseOperation(col_A, col_B, res_col, tagged_rows, '+', number_format)
 
-    table_header_row = ["NN", "Out/Activ", "dErr/dW", "Activ/Out", "deltas", "next layer"]
-    storage.setPrintHeader(table_header_row)
+        start_row_to_accumulate = start_row
+        for i in range(1, num_of_accumulations_per_sum):
+            self.storage.tagRows(res_col)
+            tagged_rows = range(start_row_to_accumulate, start_row_to_accumulate + num_of_parallel_sums*rows_delta, rows_delta)
+            self.storage.shiftColumnOnTaggedRows(res_col, tagged_rows, distance_to_shift=1) #shift to higher-indexed rows
 
-    zero_vector = [0] * nn.totalNumOfNetWeights
-    storage.loadData(zero_vector, nn_start_row, nn.numbersFormat.total_bits, deltas_col)
-    storage.loadData(zero_vector, nn_start_row, nn.numbersFormat.total_bits, next_deltas_col)
+            start_row_to_accumulate = start_row + i
+            self.storage.tagRows(res_col)
+            tagged_rows = range(start_row_to_accumulate, start_row_to_accumulate + num_of_parallel_sums*rows_delta, rows_delta)
+            self.storage.taggedRowWiseOperation(col_A, col_B, res_col, tagged_rows, '+', number_format)
 
-    output_start_row = nn_start_row + nn.totalNumOfNetWeights
-    storage.rowWiseOperation(output_col, nn_weights_column, next_deltas_col,
-                             output_start_row, output_start_row+nn.layers[-1][1]-1, '-')
-
-    for layer_index in range(len(nn.layers)-1, 0, -1):
-
-        # Layer structure
-        neurons_in_layer = len(nn.weightsMatrices[layer_index])
-        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
-        total_layer_weights = neurons_in_layer * weights_per_neuron
-        layer_start_row = output_start_row - total_layer_weights
-
-        # Get layer deltas to 'deltas_col'
-        broadcastData(storage, next_deltas_col, output_start_row, neurons_in_layer,
-                      layer_start_row, weights_per_neuron, deltas_col, 1, weights_per_neuron)
-
-        # Calculate partial derivatives for each weight
-        storage.rowWiseOperation(deltas_col, activations_col, partial_derivatives_col,
-                                 layer_start_row, layer_start_row + total_layer_weights-1, '*', nn.numbersFormat)
+        for i in range(1, num_of_parallel_sums+1):
+            self.storage.tagRows(res_col)
+            accumulation_result_row = start_row + i*num_of_accumulations_per_sum - 1
+            final_output_destination_row = start_row + num_of_parallel_sums*num_of_accumulations_per_sum + i-1
+            self.storage.broadcastDataElement(res_col, accumulation_result_row, final_output_destination_row, res_col, 0, 1)
 
 
-        # Calculating delta(prev_layer) = delta(curr_layer)*W(curr_layer)
-        if layer_index!=1:     # No need for next_layer_delta in first hidden layer
-            storage.rowWiseOperation(deltas_col, nn_weights_column, deltas_col,
+    ############################################################
+    ######  Feedforward an input through the net
+    ############################################################
+    def feedforward(self, nn, MUL_column, accumulation_column):
+        bias = [1]
+        number_of_nn_layers = len(nn.layers)
+        start_row = self.nn_start_row
+        activations_col = self.input_column
+        MUL_result_col = MUL_column
+        ACC_result_col = accumulation_column
+
+        table_header_row = ["NN", "input", "MUL", "ACC"]
+        self.storage.setPrintHeader(table_header_row)
+
+        for layer_index in range(1, number_of_nn_layers):
+            neurons_in_layer = len(nn.weightsMatrices[layer_index])
+            weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+            layer_total_weights = neurons_in_layer * weights_per_neuron
+            zero_vector = [0] * layer_total_weights
+
+            if self.storage.verbose:
+                self.storage.printArray(msg=("beginning of feedforward iteration, layer " + str(layer_index)))
+            # 1) Broadcast
+            #Load bias
+            activations_from_prev_layer = nn.layers[layer_index - 1][1]
+            self.storage.loadData(bias, start_row + activations_from_prev_layer, nn.numbersFormat.total_bits, activations_col)
+
+            broadcast_start_row = start_row + weights_per_neuron # first instance of input is aligned with first neuron weights
+            self.storage.broadcastData(activations_col, start_row, weights_per_neuron,
+                          broadcast_start_row, 1, activations_col, weights_per_neuron, neurons_in_layer-1) #first appearance of input is already aligned with first neuron weights
+
+            if self.storage.verbose:
+                self.storage.printArray(msg="after broadcast")
+
+            # 2) MUL
+            hidden_layer_start_row = start_row
+
+            self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, MUL_result_col)
+            self.storage.MULConsecutiveRows(start_row, start_row + layer_total_weights-1, MUL_result_col, self.nn_weights_column, activations_col, nn.numbersFormat)
+
+            if self.storage.verbose:
+                self.storage.printArray(msg="after MUL")
+
+            # 3) Accumulate
+
+            self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, ACC_result_col)
+
+            self.parallelAccumulate(MUL_result_col, ACC_result_col, ACC_result_col,
+                               start_row, weights_per_neuron,
+                               neurons_in_layer, weights_per_neuron, nn.numbersFormat)
+
+            start_row += layer_total_weights
+            activations_col, ACC_result_col = ACC_result_col, activations_col
+
+            if self.storage.verbose:
+                self.storage.printArray(msg="after Accumulate")
+
+        output_col = activations_col #after each iteration, activations_col holds layer output
+        net_output = []
+        for i in range(nn.layers[number_of_nn_layers-1][1]):
+            net_output.append(self.storage.crossbarArray[start_row+i][output_col])
+        print("")
+        print("=== NN output is: ", net_output)
+
+        return (net_output, output_col)
+
+
+    ############################################################
+    ######  Backward propagation of an output through the net
+    ############################################################
+    def backPropagation(self, nn, output_col, partial_derivatives_col, activations_col, deltas_col, next_deltas_col):
+        print("BP in NN")
+
+        if self.samples_trained == 0:
+            zero_vector = [0] * nn.totalNumOfNetWeights
+            self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, deltas_col)
+            self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, next_deltas_col)
+
+        output_start_row = self.nn_start_row + nn.totalNumOfNetWeights
+        self.storage.rowWiseOperation(output_col, self.nn_weights_column, next_deltas_col,
+                                      output_start_row, output_start_row+nn.layers[-1][1]-1, '-')
+
+        for layer_index in range(len(nn.layers)-1, 0, -1):
+
+            # Layer structure
+            neurons_in_layer = len(nn.weightsMatrices[layer_index])
+            weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+            total_layer_weights = neurons_in_layer * weights_per_neuron
+            layer_start_row = output_start_row - total_layer_weights
+
+            # Get layer deltas to 'deltas_col'
+            self.storage.broadcastData(next_deltas_col, output_start_row, neurons_in_layer,
+                          layer_start_row, weights_per_neuron, deltas_col, 1, weights_per_neuron)
+
+            # Calculate partial derivatives for each weight
+            self.storage.rowWiseOperation(deltas_col, activations_col, partial_derivatives_col,
                                      layer_start_row, layer_start_row + total_layer_weights-1, '*', nn.numbersFormat)
 
-            next_deltas_sum_start_row = output_start_row - weights_per_neuron
-            storage.rowWiseOperation(deltas_col, deltas_col, next_deltas_col,
-                                     next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron-1, 'max', nn.numbersFormat)
 
-            for neuron in range(neurons_in_layer-1):
-                rows_to_shift = range(next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron)
-                storage.shiftColumnOnTaggedRows(next_deltas_col, rows_to_shift, -weights_per_neuron)
+            # Calculating delta(prev_layer) = delta(curr_layer)*W(curr_layer)
+            if layer_index!=1:     # No need for next_layer_delta in first hidden layer
+                self.storage.rowWiseOperation(deltas_col, self.nn_weights_column, deltas_col,
+                                         layer_start_row, layer_start_row + total_layer_weights-1, '*', nn.numbersFormat)
 
-                next_deltas_sum_start_row -= weights_per_neuron
-                storage.rowWiseOperation(deltas_col, next_deltas_col, next_deltas_col,
-                                        next_deltas_sum_start_row, next_deltas_sum_start_row+weights_per_neuron-1, '+', nn.numbersFormat)
+                next_deltas_sum_start_row = output_start_row - weights_per_neuron
+                self.storage.rowWiseOperation(deltas_col, deltas_col, next_deltas_col,
+                                         next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron-1, 'max', nn.numbersFormat)
 
-        output_start_row -= total_layer_weights
-        output_col, activations_col = activations_col, output_col
+                for neuron in range(neurons_in_layer-1):
+                    rows_to_shift = range(next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron)
+                    self.storage.shiftColumnOnTaggedRows(next_deltas_col, rows_to_shift, -weights_per_neuron)
 
-    print("Finished BP in NN")
+                    next_deltas_sum_start_row -= weights_per_neuron
+                    self.storage.rowWiseOperation(deltas_col, next_deltas_col, next_deltas_col,
+                                            next_deltas_sum_start_row, next_deltas_sum_start_row+weights_per_neuron-1, '+', nn.numbersFormat)
 
-############################################################
-######  Update net weights - all in parallel
-############################################################
-def update_weights(nn, storage, nn_start_row, nn_weights_column, partial_derivatives_column, learning_rate=0.05):
-    output_start_row = nn_start_row + nn.totalNumOfNetWeights
-    storage.rowWiseOperationWithConstant(partial_derivatives_column, learning_rate, partial_derivatives_column,
-                                         nn_start_row, output_start_row-1, '*', nn.numbersFormat)
+            output_start_row -= total_layer_weights
+            output_col, activations_col = activations_col, output_col
 
-    storage.rowWiseOperation(nn_weights_column, partial_derivatives_column, nn_weights_column,
-                             nn_start_row, output_start_row-1, '-', nn.numbersFormat)
-    print("Updated NN weights in ReCAM")
+        print("Finished BP in NN")
+
+    ############################################################
+    ######  Update net weights - all in parallel
+    ############################################################
+    def update_weights(self, nn, nn_weights_column, partial_derivatives_column, learning_rate=0.05):
+        output_start_row = self.nn_start_row + nn.totalNumOfNetWeights
+        self.storage.rowWiseOperationWithConstant(partial_derivatives_column, learning_rate, partial_derivatives_column,
+                                                  self.nn_start_row, output_start_row-1, '*', nn.numbersFormat)
+
+        self.storage.rowWiseOperation(nn_weights_column, partial_derivatives_column, nn_weights_column,
+                                      self.nn_start_row, output_start_row-1, '-', nn.numbersFormat)
+        print("Updated NN weights in ReCAM")
+
+
+    ############################################################
+    ######  Update net weights - all in parallel
+    ############################################################
+    def SGD_train(self, nn, partial_derivatives_column, deltas_col, next_deltas_col, SGD_sums_column):
+        table_header_row = ["NN", "Out/Activ", "dErr/dW", "Activ/Out", "deltas", "next layer"]
+        self.storage.setPrintHeader(table_header_row)
+
+        if self.samples_trained == 0:
+            zero_vector = [0] * nn.totalNumOfNetWeights
+            self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, SGD_sums_column)
+
+        output_start_row = self.nn_start_row + nn.totalNumOfNetWeights
+        if self.samples_trained % self.SGD_mini_batch_size == 0:  # First sample in mini-batch
+            self.storage.rowWiseOperationWithConstant(partial_derivatives_column, self.learning_rate, SGD_sums_column,
+                                                      self.nn_start_row, output_start_row - 1, '*', nn.numbersFormat)
+        else:
+            self.storage.rowWiseOperationWithConstant(partial_derivatives_column, self.learning_rate,
+                                                      partial_derivatives_column,
+                                                      self.nn_start_row, output_start_row - 1, '*', nn.numbersFormat)
+            self.storage.rowWiseOperation(SGD_sums_column, partial_derivatives_column, SGD_sums_column,
+                                          self.nn_start_row, output_start_row - 1, '+', nn.numbersFormat)
+
+        self.samples_trained += 1
+        if self.samples_trained % self.SGD_mini_batch_size==0:
+            self.storage.rowWiseOperation(self.nn_weights_column, SGD_sums_column, self.nn_weights_column,
+                                          self.nn_start_row, output_start_row - 1, '-', nn.numbersFormat)
+
+        print("Finished sample ",self.samples_trained," out of a mini-batch size of ",self.SGD_mini_batch_size)
+
 
 ############################################################
 ######  Test function
 ############################################################
 def NN_on_ReCAM_test():
-    storage = ReCAM.ReCAM(1024)
-    storage.setVerbose(True)
+    NN_Manager = initialize_NN_on_ReCAM()
 
     nn_input_size = 3 # actual input length will be +1 due to bias
     fixed_point_10bit = FixedPoint.FixedPointFormat(6,10)
@@ -270,26 +317,26 @@ def NN_on_ReCAM_test():
 
     nn_weights_column = 0
     nn_start_row = 0
-    loadNNtoStorage(storage, nn, nn_weights_column, nn_start_row)
+    NN_Manager.loadNNtoStorage(nn, nn_start_row, nn_weights_column)
 
     input_column = 1
     FP_MUL_column = 2
     FP_accumulation_column = 3
     input_start_row = nn_start_row
-    loadInputToStorage(storage, fixed_point_10bit, nn_input_size, input_column, input_start_row)
+    NN_Manager.loadInputToStorage(fixed_point_10bit, nn_input_size, input_column, input_start_row)
 
     target_output = [1,2]
-    loadTargetOutputToStorage(storage, target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit, nn_weights_column)
+    NN_Manager.loadTargetOutputToStorage(target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit, nn_weights_column)
 
-    FP_output_column = feedforward(nn, storage, nn_weights_column, nn_start_row, input_column, FP_MUL_column, FP_accumulation_column)
+    FP_output = NN_Manager.feedforward(nn, nn_weights_column, nn_start_row, input_column, FP_MUL_column, FP_accumulation_column)
 
-    BP_output_column = FP_output_column
+    BP_output_column = FP_output[1]
     BP_partial_derivatives_column = FP_MUL_column
-    activations_column = 1 if FP_output_column==3 else 3
+    activations_column = 1 if BP_output_column==3 else 3
     BP_deltas_column = 4
     BP_next_deltas_column = 5
 
-    backPropagation(nn, storage, nn_start_row, nn_weights_column, BP_output_column, BP_partial_derivatives_column,
+    NN_Manager.backPropagation(nn, nn_start_row, nn_weights_column, BP_output_column, BP_partial_derivatives_column,
                     activations_column, BP_deltas_column, BP_next_deltas_column)
 
 

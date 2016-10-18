@@ -166,6 +166,21 @@ class ReCAM:
         cycles_executed = 1 + self.crossbarColumns[data_col_index]
         self.advanceCycleCouter(cycles_executed)
 
+    #####################################################################
+    ######      Broadcast a single element to multiple ReCAM rows
+    #####################################################################
+    def broadcastData(self, data_col_index, data_start_row_index, data_length,
+                      destination_start_row, destination_row_hops, destination_col_index, destination_delta,
+                      destination_rows_per_element):
+
+        destination_row = destination_start_row
+        for data_row in range(data_start_row_index, data_start_row_index + data_length):
+            self.broadcastDataElement(data_col_index, data_row, destination_row,
+                                         destination_col_index, destination_delta, destination_rows_per_element)
+            destination_row += destination_row_hops
+
+            # cycle count is set by broadcastDataElement()
+
 
     #####################################################################
     ######      Simple arithmetic - Add, Subtract, Max

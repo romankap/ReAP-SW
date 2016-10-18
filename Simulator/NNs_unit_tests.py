@@ -48,46 +48,45 @@ def test():
     NN_on_CPU.set_SGD_parameters(nn, mini_batch_size, learning_rate)
 
     #--- ReCAM ---#
-    storage = ReCAM.ReCAM(2048)
-    storage.setVerbose(False)
+    NN_on_ReCAM = NNs_on_ReCAM.initialize_NN_on_ReCAM()
+    NN_on_ReCAM.set_SGD_parameters(mini_batch_size, learning_rate)
 
     nn_weights_column = 0
     nn_start_row = 0
-    NNs_on_ReCAM.loadNNtoStorage(storage, nn, nn_weights_column, nn_start_row)
+    NN_on_ReCAM.loadNNtoStorage(nn, nn_weights_column, nn_start_row)
 
     input_column = 1
     FP_MUL_column = 2
     FP_accumulation_column = 3
     BP_deltas_column = 4
     BP_next_deltas_column = 5
+    SGD_sums_column = 6
 
     input_start_row = nn_start_row
-    CPU_SGD_weights = [None]
 
-    for training_iteration in range(1):
+    for training_iteration in range(4):
         #--- ReCAM ---#
-        NNs_on_ReCAM.loadInputToStorage(storage, fixed_point_10bit_precision, nn_input_size, input_column, input_start_row, input_vector)
+        NN_on_ReCAM.loadInputToStorage(fixed_point_10bit_precision, nn_input_size, input_column, input_start_row, input_vector)
 
-        NNs_on_ReCAM.loadTargetOutputToStorage(storage, target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit_precision, nn_weights_column)
+        NN_on_ReCAM.loadTargetOutputToStorage(target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit_precision)
 
-        (ReCAM_FP_output, ReCAM_FP_output_col_index) = NNs_on_ReCAM.feedforward(nn, storage, nn_weights_column, nn_start_row, input_column, FP_MUL_column, FP_accumulation_column)
+        (ReCAM_FP_output, ReCAM_FP_output_col_index) = NN_on_ReCAM.feedforward(nn, FP_MUL_column, FP_accumulation_column)
 
         BP_output_column = ReCAM_FP_output_col_index
         BP_partial_derivatives_column = FP_MUL_column
         activations_column = 1 if ReCAM_FP_output_col_index==3 else 3
 
-        NNs_on_ReCAM.backPropagation(nn, storage, nn_start_row, nn_weights_column, BP_output_column, BP_partial_derivatives_column,
+        NN_on_ReCAM.backPropagation(nn, BP_output_column, BP_partial_derivatives_column,
                                     activations_column, BP_deltas_column, BP_next_deltas_column)
-        ReCAM_pds = NNs_on_ReCAM.get_NN_matrices(nn, storage, BP_partial_derivatives_column, nn_start_row)
+        ReCAM_pds = NN_on_ReCAM.get_NN_matrices(nn, BP_partial_derivatives_column, nn_start_row)
 
-        NNs_on_ReCAM.update_weights(nn, storage, nn_start_row, nn_weights_column, BP_partial_derivatives_column, learning_rate)
-        ReCAM_weights = NNs_on_ReCAM.get_NN_matrices(nn, storage, nn_weights_column, nn_start_row)
+        #NN_on_ReCAM.update_weights(nn, nn_start_row, nn_weights_column, BP_partial_derivatives_column, learning_rate)
+        NN_on_ReCAM.SGD_train(nn, BP_partial_derivatives_column, BP_deltas_column, BP_next_deltas_column, SGD_sums_column)
+        ReCAM_weights = NN_on_ReCAM.get_NN_matrices(nn, nn_weights_column, nn_start_row)
         print("Finished ReCAM Execution", training_iteration)
 
         #--- CPU ---#
         NN_on_CPU.SGD_train(nn, input_vector, target_output)
-
-        print(CPU_SGD_weights)
         print("Finished CPU Execution", training_iteration)
 
         # --- Verify weights match ---#

@@ -179,7 +179,8 @@ class ReCAM_NN_Manager:
             hidden_layer_start_row = start_row
 
             self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, MUL_result_col)
-            self.storage.MULConsecutiveRows(start_row, start_row + layer_total_weights-1, MUL_result_col, self.nn_weights_column, activations_col, nn.numbersFormat)
+            self.storage.MULConsecutiveRows(start_row, start_row + layer_total_weights-1, MUL_result_col,
+                                            self.nn_weights_column, activations_col, nn.numbersFormat)
 
             if self.storage.verbose:
                 self.storage.printArray(msg="after MUL")
@@ -188,9 +189,8 @@ class ReCAM_NN_Manager:
 
             self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, ACC_result_col)
 
-            self.parallelAccumulate(MUL_result_col, ACC_result_col, ACC_result_col,
-                               start_row, weights_per_neuron,
-                               neurons_in_layer, weights_per_neuron, nn.numbersFormat)
+            self.parallelAccumulate(MUL_result_col, ACC_result_col, ACC_result_col, start_row, weights_per_neuron,
+                                    neurons_in_layer, weights_per_neuron, nn.numbersFormat)
 
             start_row += layer_total_weights
             activations_col, ACC_result_col = ACC_result_col, activations_col
@@ -221,7 +221,7 @@ class ReCAM_NN_Manager:
 
         output_start_row = self.nn_start_row + nn.totalNumOfNetWeights
         self.storage.rowWiseOperation(output_col, self.nn_weights_column, next_deltas_col,
-                                      output_start_row, output_start_row+nn.layers[-1][1]-1, '-')
+                                      output_start_row, output_start_row+nn.layers[-1][1]-1, '-', nn.numbersFormat)
 
         for layer_index in range(len(nn.layers)-1, 0, -1):
 

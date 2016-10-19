@@ -147,7 +147,7 @@ class CPU_NN_Manager:
                 weights_in_prev_bp_layer_neuron = len(nn.weightsMatrices[layer_index+1][0])
 
                 curr_delta = [0] * weights_in_prev_bp_layer_neuron
-                for neuron_in_prev_bp_index in range(neurons_in_prev_bp_layer):
+                for neuron_in_prev_bp_index in reversed(range(neurons_in_prev_bp_layer)):
                     temp_delta = [0] * weights_in_prev_bp_layer_neuron
                     listWithScalarOperation(prev_delta[neuron_in_prev_bp_index], nn.weightsMatrices[layer_index+1][neuron_in_prev_bp_index], temp_delta, '*', nn.numbersFormat)
                     last_curr_delta_value = copy.deepcopy(curr_delta)   #DEBUG. TODO: Remove when done

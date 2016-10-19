@@ -22,6 +22,16 @@ First (last) layer is input (output) layer.
 ################################################
 max_operation_string = "max"
 
+def check_if_all_are_zero(list):
+    if all(v == 0.0 for v in list):
+        return True
+    return False
+
+def check_if_any_is_zero(list):
+    if any(v == 0.0 for v in list):
+        return True
+    return False
+
 def convert_if_needed(result, number_format=None):
     if number_format:
         return number_format.convert(result)
@@ -98,8 +108,8 @@ class CPU_NN_Manager:
             for neuron in range(neurons_in_layer):
                 weighted_sum = 0
                 for weight in range(weights_per_neuron):
-                    weighted_sum = nn.numbersFormat.convert(weighted_sum +
-                                                            nn.numbersFormat.convert(activations[layer_index-1][weight] * nn.weightsMatrices[layer_index][neuron][weight]))
+                    mul_result = nn.numbersFormat.convert(activations[layer_index-1][weight] * nn.weightsMatrices[layer_index][neuron][weight])
+                    weighted_sum = nn.numbersFormat.convert(weighted_sum + mul_result)
                 activations[layer_index].append(weighted_sum)
 
             if layer_index!=num_of_net_layers-1:
@@ -114,6 +124,8 @@ class CPU_NN_Manager:
     def backPropagation(self, nn, activations, target):
         num_of_net_layers = len(nn.layers)
         partial_derivatives = [None]
+        deltas = [[] for x in range(len(nn.layers))]
+        deltas[0] = None
 
         curr_delta = None
         prev_delta = None
@@ -128,6 +140,7 @@ class CPU_NN_Manager:
             if layer_index==num_of_net_layers-1:
                 curr_delta = [0] * len(activations[num_of_net_layers - 1])
                 listWithListOperation(activations[num_of_net_layers - 1], target, curr_delta, '-', nn.numbersFormat)
+                deltas[layer_index] = curr_delta  # DEBUG. TODO: Remove when done
             # Deltas of hidden layers
             else:
                 neurons_in_prev_bp_layer = len(nn.weightsMatrices[layer_index+1])
@@ -137,24 +150,30 @@ class CPU_NN_Manager:
                 for neuron_in_prev_bp_index in range(neurons_in_prev_bp_layer):
                     temp_delta = [0] * weights_in_prev_bp_layer_neuron
                     listWithScalarOperation(prev_delta[neuron_in_prev_bp_index], nn.weightsMatrices[layer_index+1][neuron_in_prev_bp_index], temp_delta, '*', nn.numbersFormat)
+                    last_curr_delta_value = copy.deepcopy(curr_delta)   #DEBUG. TODO: Remove when done
                     listWithListOperation(temp_delta, curr_delta, curr_delta, '+', nn.numbersFormat)
+                    check_if_any_is_zero(temp_delta)    #DEBUG. TODO: Remove when done
+                    check_if_any_is_zero(curr_delta)    #DEBUG. TODO: Remove when done
 
+                deltas[layer_index] = curr_delta[:-1]  # DEBUG. TODO: Remove when done
             for neuron_index in range(neurons_in_layer):
                 neuron_pds = [0] * weights_per_neuron
                 listWithScalarOperation(curr_delta[neuron_index], activations[layer_index-1], neuron_pds, '*', nn.numbersFormat)
-                partial_derivatives[layer_index].append(neuron_pds)
+                partial_derivatives[layer_index].append(neuron_pds) # DEBUG. TODO: Remove when done
+                check_if_all_are_zero(neuron_pds) # DEBUG. TODO: Remove when done
 
             prev_delta = curr_delta
 
         print("Finished BP in NN on CPU")
-        return partial_derivatives
+        return (partial_derivatives, deltas)
 
     ############################################################
     ######  Backward propagation of an output through the net
     ############################################################
     def SGD_train(self, nn, NN_input, target_output):
         activations = self.feedforward(nn, NN_input)
-        partial_derivatives = self.backPropagation(nn, activations, target_output)
+        (partial_derivatives, deltas) = self.backPropagation(nn, activations, target_output)
+        partial_derivatives_to_return  = copy.deepcopy(partial_derivatives) #DEBUG. TODO: place in commment
         num_of_net_layers = len(nn.layers)
         formatted_learning_rate = nn.numbersFormat.convert(self.learning_rate)
 
@@ -186,6 +205,7 @@ class CPU_NN_Manager:
                     listWithListOperation(nn.weightsMatrices[layer_index][neuron_index], self.SGD_weights[layer_index][neuron_index],
                                           nn.weightsMatrices[layer_index][neuron_index], '-', nn.numbersFormat)
 
+        return (partial_derivatives_to_return, activations, deltas)
 
 ############################################################
 ######  Test function

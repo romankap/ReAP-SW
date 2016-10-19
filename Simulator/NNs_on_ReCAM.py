@@ -151,9 +151,13 @@ class ReCAM_NN_Manager:
         activations_col = self.input_column
         MUL_result_col = MUL_column
         ACC_result_col = accumulation_column
+        activations_to_return = [[] for x in range(number_of_nn_layers)]
 
         table_header_row = ["NN", "input", "MUL", "ACC"]
         self.storage.setPrintHeader(table_header_row)
+
+        for neuron_activation_index in range(len(nn.weightsMatrices[1][0])):
+            activations_to_return[0].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col])
 
         for layer_index in range(1, number_of_nn_layers):
             neurons_in_layer = len(nn.weightsMatrices[layer_index])
@@ -176,8 +180,6 @@ class ReCAM_NN_Manager:
                 self.storage.printArray(msg="after broadcast")
 
             # 2) MUL
-            hidden_layer_start_row = start_row
-
             self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, MUL_result_col)
             self.storage.MULConsecutiveRows(start_row, start_row + layer_total_weights-1, MUL_result_col,
                                             self.nn_weights_column, activations_col, nn.numbersFormat)
@@ -195,6 +197,12 @@ class ReCAM_NN_Manager:
             start_row += layer_total_weights
             activations_col, ACC_result_col = ACC_result_col, activations_col
 
+            for neuron_activation_index in range(neurons_in_layer): #Debug. TODO: Remove later
+                activations_to_return[layer_index].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col])
+            if layer_index != number_of_nn_layers-1:
+                activations_to_return[layer_index].append(1)
+
+
             if self.storage.verbose:
                 self.storage.printArray(msg="after Accumulate")
 
@@ -205,7 +213,7 @@ class ReCAM_NN_Manager:
         print("")
         print("=== NN output is: ", net_output)
 
-        return (net_output, output_col)
+        return (net_output, output_col, activations_to_return)
 
 
     ############################################################
@@ -213,6 +221,8 @@ class ReCAM_NN_Manager:
     ############################################################
     def backPropagation(self, nn, output_col, partial_derivatives_col, activations_col, deltas_col, next_deltas_col):
         print("BP in NN")
+        deltas = [[] for x in range(len(nn.layers))]
+        deltas[0] = None
 
         if self.samples_trained == 0:
             zero_vector = [0] * nn.totalNumOfNetWeights
@@ -231,6 +241,8 @@ class ReCAM_NN_Manager:
             total_layer_weights = neurons_in_layer * weights_per_neuron
             layer_start_row = output_start_row - total_layer_weights
 
+            for neuron_index in range(neurons_in_layer):
+                deltas[layer_index].append(self.storage.crossbarArray[output_start_row+neuron_index][next_deltas_col])  # DEBUG. TODO: Remove later
             # Get layer deltas to 'deltas_col'
             self.storage.broadcastData(next_deltas_col, output_start_row, neurons_in_layer,
                           layer_start_row, weights_per_neuron, deltas_col, 1, weights_per_neuron)
@@ -246,6 +258,7 @@ class ReCAM_NN_Manager:
                                          layer_start_row, layer_start_row + total_layer_weights-1, '*', nn.numbersFormat)
 
                 next_deltas_sum_start_row = output_start_row - weights_per_neuron
+                # Copying from deltas_col to next_deltas_col
                 self.storage.rowWiseOperation(deltas_col, deltas_col, next_deltas_col,
                                          next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron-1, 'max', nn.numbersFormat)
 
@@ -260,8 +273,10 @@ class ReCAM_NN_Manager:
             output_start_row -= total_layer_weights
             output_col, activations_col = activations_col, output_col
 
-        print("Finished BP in NN")
 
+
+        print("Finished BP in NN")
+        return deltas
     ############################################################
     ######  Update net weights - all in parallel
     ############################################################

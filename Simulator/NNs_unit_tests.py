@@ -13,6 +13,21 @@ import random
 sys.path.append(lib_path)
 import swalign'''
 
+def compare_activation_vectors(ReCAM_matrix, CPU_matrix, type=""):
+    index_in_ReCAM = 0
+
+    for layer_index in range(1, len(CPU_matrix)):
+        for neuron_index in range(len(CPU_matrix[layer_index])):
+            #if ReCAM_pds[index_in_ReCAM] != CPU_pds[layer_index][neuron_index][weight_index]:
+            if ReCAM_matrix[layer_index][neuron_index] != CPU_matrix[layer_index][neuron_index]:
+                print("")
+                print("Index in ReCAM: {}. CPU[{}][{}]".format(index_in_ReCAM, layer_index, neuron_index))
+                exit("ERROR: Mismatching ReCAM and CPU " +  type + "!")
+
+                index_in_ReCAM += 1
+
+    print("VVV ReCAM and CPU " + type + " match VVV")
+
 def compare_NN_matrices(ReCAM_matrix, CPU_matrix, type=""):
     index_in_ReCAM = 0
 
@@ -34,15 +49,15 @@ def compare_NN_matrices(ReCAM_matrix, CPU_matrix, type=""):
 
 def test():
     nn_input_size = 3 # actual input length will be +1 due to bias
-    fixed_point_10bit_precision = FixedPoint.FixedPointFormat(6,10)
+    fixed_point_10bit_precision = FixedPoint.FixedPointFormat(4,12)
     nn = NeuralNetwork.createDemoFullyConnectNN(fixed_point_10bit_precision, nn_input_size)
     NN_on_CPU = NNs_on_CPU.initialize_NN_on_CPU(fixed_point_10bit_precision)
 
-    input_vector = [3]*(nn_input_size+1)
+    input_vector = [2]*(nn_input_size+1)
     input_vector[nn_input_size] = 1 #bias value
-    target_output = [1, 2]
+    target_output = [3, 4]
     learning_rate = 0.02
-    mini_batch_size = 2
+    mini_batch_size = 20
 
     # --- CPU ---#
     NN_on_CPU.set_SGD_parameters(nn, mini_batch_size, learning_rate)
@@ -64,19 +79,19 @@ def test():
 
     input_start_row = nn_start_row
 
-    for training_iteration in range(4):
+    for training_iteration in range(1000):
         #--- ReCAM ---#
         NN_on_ReCAM.loadInputToStorage(fixed_point_10bit_precision, nn_input_size, input_column, input_start_row, input_vector)
 
         NN_on_ReCAM.loadTargetOutputToStorage(target_output, nn_start_row + nn.totalNumOfNetWeights, fixed_point_10bit_precision)
 
-        (ReCAM_FP_output, ReCAM_FP_output_col_index) = NN_on_ReCAM.feedforward(nn, FP_MUL_column, FP_accumulation_column)
+        (ReCAM_FP_output, ReCAM_FP_output_col_index, ReCAM_activations) = NN_on_ReCAM.feedforward(nn, FP_MUL_column, FP_accumulation_column)
 
         BP_output_column = ReCAM_FP_output_col_index
         BP_partial_derivatives_column = FP_MUL_column
         activations_column = 1 if ReCAM_FP_output_col_index==3 else 3
 
-        NN_on_ReCAM.backPropagation(nn, BP_output_column, BP_partial_derivatives_column,
+        ReCAM_deltas = NN_on_ReCAM.backPropagation(nn, BP_output_column, BP_partial_derivatives_column,
                                     activations_column, BP_deltas_column, BP_next_deltas_column)
         ReCAM_pds = NN_on_ReCAM.get_NN_matrices(nn, BP_partial_derivatives_column, nn_start_row)
 
@@ -86,10 +101,13 @@ def test():
         print("Finished ReCAM Execution", training_iteration)
 
         #--- CPU ---#
-        NN_on_CPU.SGD_train(nn, input_vector, target_output)
+        (CPU_pds, CPU_activations, CPU_deltas) = NN_on_CPU.SGD_train(nn, input_vector, target_output)
         print("Finished CPU Execution", training_iteration)
 
         # --- Verify weights match ---#
+        compare_activation_vectors(ReCAM_activations, CPU_activations, "activations")
+        compare_activation_vectors(ReCAM_deltas, CPU_deltas, "deltas")
+        compare_NN_matrices(ReCAM_pds, CPU_pds, "partial derivatives")
         compare_NN_matrices(ReCAM_weights, nn.weightsMatrices, "weights")
         #storage.printArray()
 

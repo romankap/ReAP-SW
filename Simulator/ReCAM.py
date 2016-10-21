@@ -52,6 +52,10 @@ class ReCAM:
         self.cycleCounter = 0
         self.frequency = 500 * 10**6
 
+        self.instructionsHistogram = {}
+        self.histogramScope = ""
+        self.initialize_instructions_histogram()
+
     ### ------------------------------------------------------------ ###
     ### ------ Cycle Counter ------- ###
 
@@ -76,13 +80,38 @@ class ReCAM:
         self.crossbarColumns = column_widths
 
     ### ------------------------------------------------------------ ###
+    def set_histogram_scope(self, scope):
+        self.histogramScope = scope
+
+
+    def remove_histogram_scope(self, scope):
+        self.histogramScope = ""
+
+
+    def initialize_instructions_histogram(self):
+        self.instructionsHistogram['vector-vector +'] = 0
+        self.instructionsHistogram['vector-vector -'] = 0
+        self.instructionsHistogram['vector-vector *'] = 0
+        self.instructionsHistogram['vector-constant +'] = 0
+        self.instructionsHistogram['vector-constant -'] = 0
+        self.instructionsHistogram['vector-constant *'] = 0
+        self.instructionsHistogram['shift rows'] = 0
+
+    def get_histogram_as_string(self):
+        histogram_string = ""
+        for instruction, count in self.instructionsHistogram.items():
+            histogram_string += self.histogramScope + "." + str(instruction) + ": " + str(count)
+
+        return histogram_string
+
+    ### ------------------------------------------------------------ ###
     # Set the width of each column
     def tagRows(self, col_index):
         cycles_executed = self.crossbarColumns[col_index]
         self.advanceCycleCouter(cycles_executed)
 
     ### ------------------------------------------------------------ ###
-    def loadData(self, column_data, start_row, column_width, column_index=-1):
+    def loadData(self, column_data, start_row, column_width, column_index=-1  ):
         if column_index == -1 or column_index+1 > self.columnsNumber:
             self.crossbarColumns.append(column_width)
             for i in range(0, self.rowsNum):

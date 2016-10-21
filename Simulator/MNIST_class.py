@@ -79,18 +79,19 @@ class MNIST(object):
             if i % width == 0:
                 render += '\n'
             if img[i] > threshold:
-                render += '@@@'
+                render += '@'
             else:
-                render += '...'
+                render += ' '
         return render
 
 def test():
     mndata = MNIST('C:\Dev\MNIST')
     mndata.load_training()
-    print(MNIST.display(mndata.train_images[0]))
+    print(MNIST.display(mndata.train_images[10]))
+    print((mndata.train_labels[10]))
     # render_10 = mndata.display(mndata.train_images[10])
     # render_100 = mndata.display(mndata.train_images[100])
     mndata.load_testing()
 
 
-test()
+#test()

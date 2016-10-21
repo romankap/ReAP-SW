@@ -26,6 +26,11 @@ def convert_if_needed(result, number_format=None):
         return number_format.convert(result)
     return result
 
+def convert_to_non_zero_if_needed(result, number_format=None):
+    if number_format:
+        return number_format.convert_to_non_zero(result)
+    return result
+
 ################################################
 ####        ReCAM API
 ################################################
@@ -266,7 +271,7 @@ class ReCAM:
     # Simple variable-constant arithmetic  - Add / Subtract
     def rowWiseOperationWithConstant(self, colA, const_scalar, res_col, start_row, end_row, operation, number_format=None):
         max_operation_string = "max"
-        converted_scalar = convert_if_needed(const_scalar, number_format)
+        converted_scalar = convert_to_non_zero_if_needed(const_scalar, number_format)
 
         if operation == '+':
             for i in range(start_row, end_row+1):

@@ -10,13 +10,45 @@ from NumberFormats import FixedPoint
 import NNs_on_ReCAM, NNs_on_CPU
 from MNIST_class import MNIST
 import NNs_unit_tests
+import datetime
 
+MNIST_path = 'C:\Dev\MNIST'
+output_file = None
+
+################# AUX #################
+def check_if_folder_exists_and_open(folder_name):
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+
+
+def open_output_file():
+    output_folder = MNIST_path + '\\Outputs\\'
+    check_if_folder_exists_and_open(output_folder)
+
+    now = str(datetime.datetime.now()).replace(':','-').replace(' ','_')
+    full_output_filename = output_folder + now + ".txt"
+    global output_file
+    output_file = open(full_output_filename, 'w')
+
+
+def write_to_output_file(*strings_to_write):
+    global output_file
+    print(*strings_to_write, file=output_file)
+    output_file.flush()
+
+
+def close_output_file():
+    global output_file
+    output_file.close()
+
+################# MNIST #################
 def get_MNIST_class_from_output(output_array):
     return output_array.index(max(output_array))
 
 def train_MNIST():
     #Load MNIST data
-    mnist_data = MNIST('C:\Dev\MNIST')
+    open_output_file()
+    mnist_data = MNIST(MNIST_path)
     mnist_data.load_training()
     mnist_data.load_testing()
 
@@ -71,8 +103,10 @@ def train_MNIST():
             if ReCAM_sample_label == mnist_data.test_labels[testing_iteration]:
                 number_of_correct_classifications += 1
 
-
         percentage_of_correct_classifications = number_of_correct_classifications / len(mnist_data.test_images)
-        print("epoch number:", epoch_number, ". ReCAM percentage of correct classifications:", percentage_of_correct_classifications)
+        write_to_output_file("epoch number:", epoch_number, ". ReCAM percentage of correct classifications:", percentage_of_correct_classifications)
 
+    close_output_file()
+
+#----- Execute -----#
 train_MNIST()

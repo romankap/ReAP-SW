@@ -16,27 +16,28 @@ Every layer has number of neurons - the net will be presented as a list.
 First (last) layer is input (output) layer.
 '''
 
-def initialize_NN_on_ReCAM():
-    NN_on_ReCAM = ReCAM_NN_Manager()
+def initialize_NN_on_ReCAM(nn_weights_column, nn_start_row, ReCAM_size=4096):
+    NN_on_ReCAM = ReCAM_NN_Manager(nn_weights_column, nn_start_row, ReCAM_size)
 
     return NN_on_ReCAM
 
 class ReCAM_NN_Manager:
-    def __init__(self):
-        self.storage = ReCAM.ReCAM(2048)
+    def __init__(self, nn_weights_column, nn_start_row, ReCAM_size=4096):
+        self.storage = ReCAM.ReCAM(ReCAM_size)
         self.storage.setVerbose(False)
 
-        self.nn_start_row = 0
-        self.nn_weights_column = 0
+        self.nn_weights_column = nn_weights_column
+        self.nn_start_row = nn_start_row
 
-        self.input_column = 1
-        self.FP_MUL_column = 2
-        self.FP_accumulation_column = 3
+        self.nn_input_column = 1
+        self.FF_MUL_column = 2
+        self.FF_accumulation_column = 3
         self.activations_column = 0
         self.BP_deltas_column = 4
         self.BP_next_deltas_column = 5
+        self.SGD_sums_column = 6
         self.BP_output_column = 0
-        self.BP_partial_derivatives_column = 0
+        self.BP_partial_derivatives_column = self.FF_MUL_column
 
         self.SGD_mini_batch_size = 0
         self.learning_rate = 0.01
@@ -51,9 +52,7 @@ class ReCAM_NN_Manager:
     ############################################################
     ######  Load NN to ReCAM
     ############################################################
-    def loadNNtoStorage(self, nn, weights_column, nn_start_row):
-        self.nn_weights_column = weights_column
-        self.nn_start_row = nn_start_row
+    def loadNNtoStorage(self, nn):
         nn_row_in_ReCAM = self.nn_start_row
 
         for layer_index in range(1, len(nn.layers)):
@@ -64,14 +63,15 @@ class ReCAM_NN_Manager:
                 self.storage.loadData(nn.weightsMatrices[layer_index][neuron_index], nn_row_in_ReCAM, nn.numbersFormat.total_bits, self.nn_weights_column)
                 nn_row_in_ReCAM += weights_in_layer
 
-        self.storage.printArray()
+        if self.storage.verbose:
+            self.storage.printArray()
 
 
     ############################################################
     ######  Load Input to ReCAM (read from file / generate)
     ############################################################
     def loadInputToStorage(self, input_format, input_size, input_column, input_start_row, input_vector=None):
-        self.input_column = input_column
+        self.nn_input_column = input_column
 
         if not input_vector:
             random_input_vector = []
@@ -79,12 +79,12 @@ class ReCAM_NN_Manager:
                 random_input_vector.append(input_format.convert(random.uniform(0.0001, 1)))
             #bias
                 random_input_vector.append(1)
-            self.storage.loadData(random_input_vector, input_start_row, input_format.total_bits, self.input_column)
+            self.storage.loadData(random_input_vector, input_start_row, input_format.total_bits, self.nn_input_column)
 
         else:
             print("Loading input from input_vector")
             #Bias should be added manually (either here or in FP function)
-            self.storage.loadData(input_vector, input_start_row, input_format.total_bits, self.input_column)
+            self.storage.loadData(input_vector, input_start_row, input_format.total_bits, self.nn_input_column)
 
 
     ############################################################
@@ -144,20 +144,19 @@ class ReCAM_NN_Manager:
     ############################################################
     ######  Feedforward an input through the net
     ############################################################
-    def feedforward(self, nn, MUL_column, accumulation_column):
+    def feedforward(self, nn):
         bias = [1]
         number_of_nn_layers = len(nn.layers)
         start_row = self.nn_start_row
-        activations_col = self.input_column
-        MUL_result_col = MUL_column
-        ACC_result_col = accumulation_column
-        activations_to_return = [[] for x in range(number_of_nn_layers)]
+        activations_col = self.nn_input_column
+        ACC_result_col = self.FF_accumulation_column
+        ##activations_to_return = [[] for x in range(number_of_nn_layers)]
 
         table_header_row = ["NN", "input", "MUL", "ACC"]
         self.storage.setPrintHeader(table_header_row)
 
-        for neuron_activation_index in range(len(nn.weightsMatrices[1][0])):
-            activations_to_return[0].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col])
+        ##for neuron_activation_index in range(len(nn.weightsMatrices[1][0])):
+        ##    activations_to_return[0].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col])
 
         for layer_index in range(1, number_of_nn_layers):
             neurons_in_layer = len(nn.weightsMatrices[layer_index])
@@ -180,8 +179,8 @@ class ReCAM_NN_Manager:
                 self.storage.printArray(msg="after broadcast")
 
             # 2) MUL
-            self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, MUL_result_col)
-            self.storage.MULConsecutiveRows(start_row, start_row + layer_total_weights-1, MUL_result_col,
+            self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, self.FF_MUL_column)
+            self.storage.MULConsecutiveRows(start_row, start_row + layer_total_weights-1, self.FF_MUL_column,
                                             self.nn_weights_column, activations_col, nn.numbersFormat)
 
             if self.storage.verbose:
@@ -191,16 +190,16 @@ class ReCAM_NN_Manager:
 
             self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, ACC_result_col)
 
-            self.parallelAccumulate(MUL_result_col, ACC_result_col, ACC_result_col, start_row, weights_per_neuron,
+            self.parallelAccumulate(self.FF_MUL_column, ACC_result_col, ACC_result_col, start_row, weights_per_neuron,
                                     neurons_in_layer, weights_per_neuron, nn.numbersFormat)
 
             start_row += layer_total_weights
             activations_col, ACC_result_col = ACC_result_col, activations_col
 
-            for neuron_activation_index in range(neurons_in_layer): #Debug. TODO: Remove later
-                activations_to_return[layer_index].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col])
-            if layer_index != number_of_nn_layers-1:
-                activations_to_return[layer_index].append(1)
+            ##for neuron_activation_index in range(neurons_in_layer): #Debug.
+            ##    activations_to_return[layer_index].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col])
+            ##if layer_index != number_of_nn_layers-1:
+            ##    activations_to_return[layer_index].append(1)
 
 
             if self.storage.verbose:
@@ -213,16 +212,29 @@ class ReCAM_NN_Manager:
         print("")
         print("=== NN output is: ", net_output)
 
-        return (net_output, output_col, activations_to_return)
+        ##return (net_output, output_col, activations_to_return)
+        return net_output, output_col
 
+    ############################################################
+    ######  Exectute feedforward and return net's output
+    ############################################################
+    def get_feedforward_output(self, nn, number_format, nn_input_size, input_vector):
+        #1. load input
+        self.loadInputToStorage(number_format, nn_input_size, self.nn_input_column, self.nn_start_row, input_vector)
 
+        #3. feedforward
+        ReCAM_FF_output, ReCAM_FF_output_col_index = self.feedforward(nn)
+        return ReCAM_FF_output
     ############################################################
     ######  Backward propagation of an output through the net
     ############################################################
-    def backPropagation(self, nn, output_col, partial_derivatives_col, activations_col, deltas_col, next_deltas_col):
-        print("BP in NN")
-        deltas = [[] for x in range(len(nn.layers))]
-        deltas[0] = None
+    def backPropagation(self, nn, activations_col):
+        ##deltas = [[] for x in range(len(nn.layers))]
+        ##deltas[0] = None
+        output_col = self.BP_output_column
+        deltas_col = self.BP_deltas_column
+        next_deltas_col = self.BP_next_deltas_column
+        partial_derivatives_col = self.BP_partial_derivatives_column
 
         if self.samples_trained == 0:
             zero_vector = [0] * nn.totalNumOfNetWeights
@@ -241,8 +253,8 @@ class ReCAM_NN_Manager:
             total_layer_weights = neurons_in_layer * weights_per_neuron
             layer_start_row = output_start_row - total_layer_weights
 
-            for neuron_index in range(neurons_in_layer):
-                deltas[layer_index].append(self.storage.crossbarArray[output_start_row+neuron_index][next_deltas_col])  # DEBUG. TODO: Remove later
+            ##for neuron_index in range(neurons_in_layer):
+                ##deltas[layer_index].append(self.storage.crossbarArray[output_start_row+neuron_index][next_deltas_col])  # DEBUG. TODO: Remove later
             # Get layer deltas to 'deltas_col'
             self.storage.broadcastData(next_deltas_col, output_start_row, neurons_in_layer,
                           layer_start_row, weights_per_neuron, deltas_col, 1, weights_per_neuron)
@@ -273,10 +285,7 @@ class ReCAM_NN_Manager:
             output_start_row -= total_layer_weights
             output_col, activations_col = activations_col, output_col
 
-
-
-        print("Finished BP in NN")
-        return deltas
+        ##return deltas
     ############################################################
     ######  Update net weights - all in parallel
     ############################################################
@@ -291,9 +300,12 @@ class ReCAM_NN_Manager:
 
 
     ############################################################
-    ######  Update net weights - all in parallel
+    ######  Update net weights - all weights in parallel
     ############################################################
-    def SGD_train(self, nn, partial_derivatives_column, deltas_col, next_deltas_col, SGD_sums_column):
+    def SGD_on_single_sample(self, nn):
+        partial_derivatives_column = self.BP_partial_derivatives_column
+        SGD_sums_column = self.SGD_sums_column
+
         table_header_row = ["NN", "Out/Activ", "dErr/dW", "Activ/Out", "deltas", "next layer"]
         self.storage.setPrintHeader(table_header_row)
 
@@ -317,7 +329,30 @@ class ReCAM_NN_Manager:
             self.storage.rowWiseOperation(self.nn_weights_column, SGD_sums_column, self.nn_weights_column,
                                           self.nn_start_row, output_start_row - 1, '-', nn.numbersFormat)
 
-        print("Finished sample ",self.samples_trained," out of a mini-batch size of ",self.SGD_mini_batch_size)
+        print("Finished sample", self.samples_trained, "with a mini-batch size of", self.SGD_mini_batch_size)
+
+    ############################################################
+    ######  Complete training iteration on a single sample
+    ############################################################
+    def SGD_train(self, nn, number_format, nn_input_size, input_vector, target_output):
+        #1. load input
+        self.loadInputToStorage(number_format, nn_input_size, self.nn_input_column, self.nn_start_row, input_vector)
+
+        #2. load target output
+        self.loadTargetOutputToStorage(target_output, self.nn_start_row + nn.totalNumOfNetWeights, number_format)
+
+        #3. feedforward
+        ReCAM_FP_output, ReCAM_FF_output_col_index = self.feedforward(nn)
+
+        #4. backpropagation
+        self.BP_output_column = ReCAM_FF_output_col_index
+        activations_column = self.nn_input_column if ReCAM_FF_output_col_index == self.FF_accumulation_column else self.FF_accumulation_column
+        self.backPropagation(nn, activations_column)
+
+        #5. SGD on a single sample
+        self.SGD_on_single_sample(nn)
+
+        print("SGD on ReCAM")
 
 
 ############################################################

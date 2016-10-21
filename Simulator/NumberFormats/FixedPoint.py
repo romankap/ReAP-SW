@@ -10,6 +10,10 @@ class FixedPointFormat:
 
         self.rounding = 1 << fraction_bits
         self.max = (1 << (integer_bits - 1)) - 1/self.rounding  # 1 bit saved for sign
+        self.positive_non_zero_min = 1 / self.rounding
+
+    def get_max(self):
+        return self.max
 
     def cycles_per_ADD(self):
         return (self.integer_bits + self.fraction_bits) * 4
@@ -24,6 +28,21 @@ class FixedPointFormat:
         elif res < -self.max:
             res = -self.max
         return res
+
+    def convert_to_non_zero(self, value):
+        res = int(value * self.rounding) / self.rounding
+        if res > self.max:
+            res = self.max
+        elif res < -self.max:
+            res = -self.max
+        elif res == 0.0:
+            res = self.positive_non_zero_min
+        return res
+
+    def convert_array_to_fixed_point(self, array):
+        for i in range(len(array)):
+            array[i] = self.convert(array[i])
+        return array
 
 
 class FixedPointNumber:

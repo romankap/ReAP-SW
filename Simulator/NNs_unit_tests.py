@@ -5,7 +5,7 @@ import ReCAM, Simulator
 import NeuralNetwork
 from NumberFormats import FixedPoint
 import NNs_on_ReCAM, NNs_on_CPU
-import numpy
+#import numpy
 import random
 
 

@@ -4,6 +4,7 @@ import struct
 import copy
 from array import array
 
+import aux_functions
 import ReCAM, Simulator
 import NeuralNetwork
 from NumberFormats import FixedPoint
@@ -13,33 +14,8 @@ import NNs_unit_tests
 import datetime
 
 MNIST_path = 'C:\Dev\MNIST'
-output_file = None
+#output_file = None
 
-################# AUX #################
-def check_if_folder_exists_and_open(folder_name):
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
-
-
-def open_output_file():
-    output_folder = MNIST_path + '\\Outputs\\'
-    check_if_folder_exists_and_open(output_folder)
-
-    now = str(datetime.datetime.now()).replace(':','-').replace(' ','_')
-    full_output_filename = output_folder + now + ".txt"
-    global output_file
-    output_file = open(full_output_filename, 'w')
-
-
-def write_to_output_file(*strings_to_write):
-    global output_file
-    print(*strings_to_write, file=output_file)
-    output_file.flush()
-
-
-def close_output_file():
-    global output_file
-    output_file.close()
 
 ################# MNIST #################
 def get_MNIST_class_from_output(output_array):
@@ -47,7 +23,7 @@ def get_MNIST_class_from_output(output_array):
 
 def train_MNIST():
     #Load MNIST data
-    open_output_file()
+    aux_functions.open_output_file(MNIST_path + '\\Outputs\\')
     mnist_data = MNIST(MNIST_path)
     mnist_data.load_training()
     mnist_data.load_testing()
@@ -92,8 +68,12 @@ def train_MNIST():
 
             # --- Verify weights match ---#
             #NNs_unit_tests.compare_NN_matrices(ReCAM_weights, nn.weightsMatrices, "weights")
+            aux_functions.write_to_output_file("Training iteration: ", training_iteration,
+                                               ". Target output:", target_output,
+                                               ". Target output:", target_output)
 
         print("Training epoch: ", epoch_number)
+        aux_functions.write_to_output_file("Training epoch: ", epoch_number)
 
         number_of_correct_classifications = 0
         for testing_iteration in range(len(mnist_data.test_images)):
@@ -104,9 +84,9 @@ def train_MNIST():
                 number_of_correct_classifications += 1
 
         percentage_of_correct_classifications = number_of_correct_classifications / len(mnist_data.test_images)
-        write_to_output_file("epoch number:", epoch_number, ". ReCAM percentage of correct classifications:", percentage_of_correct_classifications)
+        aux_functions.write_to_output_file("epoch number:", epoch_number, ". ReCAM percentage of correct classifications:", percentage_of_correct_classifications)
 
-    close_output_file()
+    aux_functions.close_output_file()
 
 #----- Execute -----#
 train_MNIST()

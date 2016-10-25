@@ -4,6 +4,7 @@ import ReCAM, Simulator
 import NeuralNetwork
 from NumberFormats import FixedPoint
 import random
+import aux_functions
 
 
 '''lib_path = os.path.abspath(os.path.join('swalign-0.3.3'))
@@ -211,6 +212,7 @@ class ReCAM_NN_Manager:
             net_output.append(self.storage.crossbarArray[start_row+i][output_col])
         print("")
         print("=== NN output is: ", net_output)
+        aux_functions.write_to_output_file("=== NN output is: ", net_output)
 
         ##return (net_output, output_col, activations_to_return)
         return net_output, output_col

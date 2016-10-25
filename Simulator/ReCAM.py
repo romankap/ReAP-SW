@@ -21,6 +21,15 @@ from tabulate import tabulate
 ################################################
 max_operation_string = "max"
 
+#--- Instructions Names ---#
+row_by_row_hist_name = 'vector-vector'
+row_by_const_hist_name = 'vector-constant'
+shift_rows_hist_name = 'shift rows'
+broadcast = 'broadcast'
+
+
+#--- Number Format Conversion ---#
+
 def convert_if_needed(result, number_format=None):
     if number_format:
         return number_format.convert(result)
@@ -89,13 +98,16 @@ class ReCAM:
 
 
     def initialize_instructions_histogram(self):
-        self.instructionsHistogram['vector-vector +'] = 0
-        self.instructionsHistogram['vector-vector -'] = 0
-        self.instructionsHistogram['vector-vector *'] = 0
-        self.instructionsHistogram['vector-constant +'] = 0
-        self.instructionsHistogram['vector-constant -'] = 0
-        self.instructionsHistogram['vector-constant *'] = 0
-        self.instructionsHistogram['shift rows'] = 0
+        self.instructionsHistogram[row_by_row_hist_name + '.+'] = 0
+        self.instructionsHistogram[row_by_row_hist_name + '.-'] = 0
+        self.instructionsHistogram[row_by_row_hist_name + '.*'] = 0
+        self.instructionsHistogram[row_by_row_hist_name + '.max'] = 0
+        self.instructionsHistogram[row_by_const_hist_name + '.+'] = 0
+        self.instructionsHistogram[row_by_const_hist_name + '.-'] = 0
+        self.instructionsHistogram[row_by_const_hist_name + '.*'] = 0
+        self.instructionsHistogram[row_by_const_hist_name + '.max'] = 0
+        self.instructionsHistogram[shift_rows_hist_name] = 0
+        self.instructionsHistogram[broadcast] = 0
 
     def get_histogram_as_string(self):
         histogram_string = ""
@@ -111,7 +123,7 @@ class ReCAM:
         self.advanceCycleCouter(cycles_executed)
 
     ### ------------------------------------------------------------ ###
-    def loadData(self, column_data, start_row, column_width, column_index=-1  ):
+    def loadData(self, column_data, start_row, column_width, column_index=-1):
         if column_index == -1 or column_index+1 > self.columnsNumber:
             self.crossbarColumns.append(column_width)
             for i in range(0, self.rowsNum):
@@ -161,7 +173,8 @@ class ReCAM:
             self.printArray(operation=operation_to_print)
 
         # cycle count
-        cycles_executed = 3 * self.crossbarColumns[col_index]
+        cycles_executed = 3 * self.crossbarColumns[col_index] # 3 cycles per shifted bit
+        self.instructionsHistogram[shift_rows_hist_name] += 1
         self.advanceCycleCouter(cycles_executed)
 
     #####################################################################
@@ -179,6 +192,7 @@ class ReCAM:
 
         # cycle count - several rows are piping the TAGs
         cycles_executed = (abs(distance_to_shift) + 2) * self.crossbarColumns[col_index]
+        self.instructionsHistogram[shift_rows_hist_name] += 1
         self.advanceCycleCouter(cycles_executed)
 
 
@@ -198,6 +212,7 @@ class ReCAM:
 
         # cycle count
         cycles_executed = 1 + self.crossbarColumns[data_col_index]
+        self.instructionsHistogram[broadcast] += 1
         self.advanceCycleCouter(cycles_executed)
 
     #####################################################################
@@ -254,6 +269,7 @@ class ReCAM:
             cycles_per_bit = min(self.crossbarColumns[colA],self.crossbarColumns[colB]) * 2
 
         cycles_executed = cycles_per_bit * max(self.crossbarColumns[colA],self.crossbarColumns[colB])
+        self.instructionsHistogram[row_by_row_hist_name + '.' + operation]
         self.advanceCycleCouter(cycles_executed)
 
 
@@ -294,6 +310,7 @@ class ReCAM:
             cycles_per_bit = min(self.crossbarColumns[colA], self.crossbarColumns[colB]) * 2
 
         cycles_executed = cycles_per_bit * max(self.crossbarColumns[colA], self.crossbarColumns[colB])
+        self.instructionsHistogram[row_by_row_hist_name + '.' + operation]
         self.advanceCycleCouter(cycles_executed)
 
     ### ------------------------------------------------------------ ###
@@ -329,6 +346,7 @@ class ReCAM:
             cycles_per_bit = 2 ** 2
 
         cycles_executed = cycles_per_bit * self.crossbarColumns[colA]
+        self.instructionsHistogram[row_by_const_hist_name + '.' + operation]
         self.advanceCycleCouter(cycles_executed)
 
     ### ------------------------------------------------------------ ###
@@ -413,6 +431,9 @@ class ReCAM:
             print(tabulate(self.crossbarArray, header, tablefmt, stralign="center"))  # other format option is "grid"
 
         print("\n")
+
+    def printHistogram(self):
+        print(self.instructionsHistogram)
 
     ### ------------------------------------------------------------ ###
     # Calculate match score

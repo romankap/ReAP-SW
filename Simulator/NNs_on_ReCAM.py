@@ -84,8 +84,10 @@ class ReCAM_NN_Manager:
 
         else:
             print("Loading input from input_vector")
+            input_vector.append(1) #Add bias to vector
             #Bias should be added manually (either here or in FP function)
             self.storage.loadData(input_vector, input_start_row, input_format.total_bits, self.nn_input_column)
+            input_vector.pop()
 
 
     ############################################################

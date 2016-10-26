@@ -53,11 +53,10 @@ def test():
     nn = NeuralNetwork.createDemoFullyConnectNN(fixed_point_10bit_precision, nn_input_size)
     NN_on_CPU = NNs_on_CPU.initialize_NN_on_CPU(fixed_point_10bit_precision)
 
-    input_vector = [3]*(nn_input_size+1)
-    input_vector[nn_input_size] = 1 #bias value
-    target_output = [1, 2]
+    input_vector = [3]*nn_input_size
+    target_output = [0, 1]
     required_learning_rate = 0.02
-    mini_batch_size = 20
+    mini_batch_size = 100
     learning_rate = required_learning_rate / mini_batch_size
 
     # --- CPU ---#
@@ -112,4 +111,4 @@ def test():
 ####         Execute         ####
 #################################
 
-#test()
+test()

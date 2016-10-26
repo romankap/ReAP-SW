@@ -20,8 +20,9 @@ def open_output_file(output_folder):
 
 def write_to_output_file(*strings_to_write):
     global output_file
-    print(*strings_to_write, file=output_file)
-    output_file.flush()
+    if output_file:
+        print(*strings_to_write, file=output_file)
+        output_file.flush()
 
 
 def close_output_file():

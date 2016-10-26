@@ -34,8 +34,8 @@ def createDemoFullyConnectNN(weights_format, input_size):
     nn.addLayer("FC", 4)
     print("Added FC layer, size =", nn.layers[3])
 
-    nn.addLayer("output", 2)
-    print("Added output layer, size =", nn.layers[4])
+    nn.addLayer("softmax", 2)
+    print("Added softmax layer, size =", nn.layers[4])
 
     return nn
 
@@ -71,7 +71,7 @@ class NeuralNetwork:
         self.weightsMatrices.append([[] for x in range(new_layer_neurons)]) #append new layer weights
         self.layers.append((type, new_layer_neurons))
 
-        if type == "FC" or type == "output":
+        if type == "FC" or type == "output" or type == "softmax":
             self.addFCLayer(weights_per_neuron, new_layer_neurons, len(self.layers)-1)
             self.totalNumOfNetWeights += weights_per_neuron*new_layer_neurons
         else:

@@ -317,7 +317,10 @@ class ReCAM:
     # Simple variable-constant arithmetic  - Add / Subtract
     def rowWiseOperationWithConstant(self, colA, const_scalar, res_col, start_row, end_row, operation, number_format=None):
         max_operation_string = "max"
-        converted_scalar = convert_to_non_zero_if_needed(const_scalar, number_format)
+        if const_scalar == 0:
+            converted_scalar = convert_if_needed(const_scalar, number_format)
+        else:
+            converted_scalar = convert_to_non_zero_if_needed(const_scalar, number_format)
 
         if operation == '+':
             for i in range(start_row, end_row+1):

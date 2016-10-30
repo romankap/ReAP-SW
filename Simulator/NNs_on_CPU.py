@@ -55,7 +55,10 @@ def listWithListOperation(list_A, list_B, res_list, operation, number_format=Non
 
 
 def listWithScalarOperation(scalar, list_A, res_list, operation, number_format=None):
-    converted_scalar = convert_to_non_zero_if_needed(scalar, number_format)
+    if scalar == 0:
+        converted_scalar = convert_if_needed(scalar, number_format)
+    else:
+        converted_scalar = convert_to_non_zero_if_needed(scalar, number_format)
 
     if operation == '*':
         for i in range(len(list_A)):

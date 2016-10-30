@@ -146,14 +146,53 @@ class ReCAM_NN_Manager:
     ############################################################
     ######  Feedforward an input through the net
     ############################################################
-    #def feedforward_FC_layer(self, nn, layer_index, start_row, ACC_result_col, activations_col):
+    def feedforward_FC_layer(self, nn, layer_index, start_row, ACC_result_col, activations_col):
+        bias = [1]
+        neurons_in_layer = len(nn.weightsMatrices[layer_index])
+        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+        layer_total_weights = neurons_in_layer * weights_per_neuron
+        zero_vector = [0] * layer_total_weights
 
+        if self.storage.verbose:
+            self.storage.printArray(msg=("beginning of feedforward iteration, layer " + str(layer_index)))
+        # 1) Broadcast
+        # Load bias
+        activations_from_prev_layer = nn.layers[layer_index - 1][1]
+        self.storage.loadData(bias, start_row + activations_from_prev_layer, nn.numbersFormat.total_bits,
+                              activations_col)
+
+        broadcast_start_row = start_row + weights_per_neuron  # first instance of input is aligned with first neuron weights
+        self.storage.broadcastData(activations_col, start_row, weights_per_neuron,
+                                   broadcast_start_row, 1, activations_col, weights_per_neuron,
+                                   neurons_in_layer - 1)  # first appearance of input is already aligned with first neuron weights
+
+        if self.storage.verbose:
+            self.storage.printArray(msg="after broadcast")
+
+        # 2) MUL
+        self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, self.FF_MUL_column)
+        self.storage.MULConsecutiveRows(start_row, start_row + layer_total_weights - 1, self.FF_MUL_column,
+                                        self.nn_weights_column, activations_col, nn.numbersFormat)
+
+        if self.storage.verbose:
+            self.storage.printArray(msg="after MUL")
+
+        # 3) Accumulate
+
+        self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, ACC_result_col)
+
+        self.parallelAccumulate(self.FF_MUL_column, ACC_result_col, ACC_result_col, start_row, weights_per_neuron,
+                                neurons_in_layer, weights_per_neuron, nn.numbersFormat)
+
+    ############################################################
+    ######  Feedforward an input through the net
+    ############################################################
+    #def feedforward_sigmoid_layer(self, nn, layer_index, start_row, ACC_result_col, activations_col):
 
     ############################################################
     ######  Feedforward an input through the net
     ############################################################
     def feedforward(self, nn):
-        bias = [1]
         number_of_nn_layers = len(nn.layers)
         start_row = self.nn_start_row
         activations_col = self.nn_input_column
@@ -170,38 +209,11 @@ class ReCAM_NN_Manager:
             neurons_in_layer = len(nn.weightsMatrices[layer_index])
             weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
             layer_total_weights = neurons_in_layer * weights_per_neuron
-            zero_vector = [0] * layer_total_weights
 
-            if self.storage.verbose:
-                self.storage.printArray(msg=("beginning of feedforward iteration, layer " + str(layer_index)))
-            # 1) Broadcast
-            #Load bias
-            activations_from_prev_layer = nn.layers[layer_index - 1][1]
-            self.storage.loadData(bias, start_row + activations_from_prev_layer, nn.numbersFormat.total_bits, activations_col)
+            if nn.layers[layer_index][0] == "FC":
+                self.feedforward_FC_layer(nn, layer_index, start_row, ACC_result_col, activations_col)
+                start_row += layer_total_weights
 
-            broadcast_start_row = start_row + weights_per_neuron # first instance of input is aligned with first neuron weights
-            self.storage.broadcastData(activations_col, start_row, weights_per_neuron,
-                          broadcast_start_row, 1, activations_col, weights_per_neuron, neurons_in_layer-1) #first appearance of input is already aligned with first neuron weights
-
-            if self.storage.verbose:
-                self.storage.printArray(msg="after broadcast")
-
-            # 2) MUL
-            self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, self.FF_MUL_column)
-            self.storage.MULConsecutiveRows(start_row, start_row + layer_total_weights-1, self.FF_MUL_column,
-                                            self.nn_weights_column, activations_col, nn.numbersFormat)
-
-            if self.storage.verbose:
-                self.storage.printArray(msg="after MUL")
-
-            # 3) Accumulate
-
-            self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, ACC_result_col)
-
-            self.parallelAccumulate(self.FF_MUL_column, ACC_result_col, ACC_result_col, start_row, weights_per_neuron,
-                                    neurons_in_layer, weights_per_neuron, nn.numbersFormat)
-
-            start_row += layer_total_weights
             activations_col, ACC_result_col = ACC_result_col, activations_col
 
             for neuron_activation_index in range(neurons_in_layer): #DEBUG
@@ -209,9 +221,8 @@ class ReCAM_NN_Manager:
             if layer_index != number_of_nn_layers-1: #DEBUG
                 activations_to_return[layer_index].append(1) #DEBUG
 
-
             if self.storage.verbose:
-                self.storage.printArray(msg="after Accumulate")
+                self.storage.printArray(msg="After ReCAM FF Accumulate")
 
         output_col = activations_col #after each iteration, activations_col holds layer output
         net_output = []

@@ -21,6 +21,27 @@ def generateRandomInput(input_size, input_format):
     return input_vector
 
 
+def createDebugNN(weights_format, input_size):
+    nn = NeuralNetwork(weights_format, input_size)
+    print("input layer size =", nn.layers[0])
+
+    nn.addLayer("FC", 3)
+    print("Added FC layer, size =", nn.layers[1])
+
+    nn.addLayer("FC", 2)
+    print("Added FC layer, size =", nn.layers[2])
+
+    # for layer_index in reversed(range(1, len(nn.layers))):
+    #     for neuron_index in range(len(nn.layers[layer_index])):
+    #         weights_per_neuron = len(nn.layers[layer_index])
+    #
+    #         for weight_index in range(weights_per_neuron):
+    #             nn.weightsMatrices[layer_index][neuron_index][weight_index] = 0.0
+    nn.weightsMatrices[1][1][1] = 0.0
+
+    return nn
+
+
 def createDemoFullyConnectNN(weights_format, input_size):
     nn = NeuralNetwork(weights_format, input_size)
     print("input layer size =", nn.layers[0])
@@ -34,8 +55,14 @@ def createDemoFullyConnectNN(weights_format, input_size):
     nn.addLayer("FC", 4)
     print("Added FC layer, size =", nn.layers[3])
 
-    nn.addLayer("softmax", 2)
-    print("Added softmax layer, size =", nn.layers[4])
+    nn.addLayer("FC", 4)
+    print("Added FC layer, size =", nn.layers[4])
+
+    #nn.addLayer("softmax", 2)
+    #print("Added softmax layer, size =", nn.layers[4])
+
+    nn.addLayer("FC", 3)
+    print("Added Fc layer, size =", nn.layers[5])
 
     return nn
 

@@ -184,10 +184,15 @@ class ReCAM_NN_Manager:
         self.parallelAccumulate(self.FF_MUL_column, ACC_result_col, ACC_result_col, start_row, weights_per_neuron,
                                 neurons_in_layer, weights_per_neuron, nn.numbersFormat)
 
+        # TODO: Add ReLU
+
     ############################################################
     ######  Feedforward an input through the net
     ############################################################
-    #def feedforward_sigmoid_layer(self, nn, layer_index, start_row, ACC_result_col, activations_col):
+    def feedforward_softmax_layer(self, nn, layer_index, start_row, ACC_result_col, activations_col):
+        self.feedforward_FC_layer(self, nn, layer_index, start_row, ACC_result_col, activations_col)
+
+        #
 
     ############################################################
     ######  Feedforward an input through the net
@@ -222,7 +227,7 @@ class ReCAM_NN_Manager:
                 activations_to_return[layer_index].append(1) #DEBUG
 
             if self.storage.verbose:
-                self.storage.printArray(msg="After ReCAM FF Accumulate")
+                self.storage.printArray(msg="feedforward Accumulate")
 
         output_col = activations_col #after each iteration, activations_col holds layer output
         net_output = []

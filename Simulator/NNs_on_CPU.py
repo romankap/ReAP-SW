@@ -121,7 +121,8 @@ class CPU_NN_Manager:
                     mul_result = convert_if_needed(activations[layer_index-1][weight] * nn.weightsMatrices[layer_index][neuron][weight], nn.numbersFormat)
                     weighted_sum = convert_if_needed(weighted_sum + mul_result, nn.numbersFormat)
                     #print("Working on layer {}, neuron {}, weight {}".format(layer_index, neuron, weight))
-                    #TODO: Add ReLU
+
+                weighted_sum = max(0, weighted_sum)
                 activations[layer_index].append(weighted_sum)
 
             if layer_index!=num_of_net_layers-1:

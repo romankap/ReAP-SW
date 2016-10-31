@@ -146,7 +146,7 @@ class ReCAM_NN_Manager:
     ############################################################
     ######  Feedforward an input through the net
     ############################################################
-    def feedforward_FC_layer(self, nn, layer_index, start_row, ACC_result_col, activations_col):
+    def feedforward_WO_activation(self, nn, layer_index, start_row, ACC_result_col, activations_col):
         bias = [1]
         neurons_in_layer = len(nn.weightsMatrices[layer_index])
         weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
@@ -171,8 +171,9 @@ class ReCAM_NN_Manager:
 
         # 2) MUL
         self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, self.FF_MUL_column)
-        self.storage.MULConsecutiveRows(start_row, start_row + layer_total_weights - 1, self.FF_MUL_column,
-                                        self.nn_weights_column, activations_col, nn.numbersFormat)
+        #self.storage.MULConsecutiveRows(start_row, start_row + layer_total_weights - 1, self.FF_MUL_column, self.nn_weights_column, activations_col, nn.numbersFormat)
+        self.storage.rowWiseOperation(self.nn_weights_column, activations_col, self.FF_MUL_column,
+                              start_row, start_row + layer_total_weights - 1, '*', nn.numbersFormat)
 
         if self.storage.verbose:
             self.storage.printArray(msg="after MUL")
@@ -184,7 +185,20 @@ class ReCAM_NN_Manager:
         self.parallelAccumulate(self.FF_MUL_column, ACC_result_col, ACC_result_col, start_row, weights_per_neuron,
                                 neurons_in_layer, weights_per_neuron, nn.numbersFormat)
 
-        # TODO: Add ReLU
+
+    ############################################################
+    ######  Feedforward an input through the net
+    ############################################################
+    def feedforward_FC_layer(self, nn, layer_index, start_row, ACC_result_col, activations_col):
+        neurons_in_layer = len(nn.weightsMatrices[layer_index])
+        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+        layer_total_weights = neurons_in_layer * weights_per_neuron
+
+        self.feedforward_WO_activation(nn, layer_index, start_row, ACC_result_col, activations_col)
+
+        # ReLU: Applying 'max' function for all feedforward outputs
+        self.storage.rowWiseOperationWithConstant(ACC_result_col, 0, ACC_result_col,
+                              start_row + layer_total_weights, start_row + layer_total_weights+neurons_in_layer-1, 'max', nn.numbersFormat)
 
     ############################################################
     ######  Feedforward an input through the net

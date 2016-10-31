@@ -232,6 +232,9 @@ class ReCAM_NN_Manager:
             if nn.layers[layer_index][0] == "FC":
                 self.feedforward_FC_layer(nn, layer_index, start_row, ACC_result_col, activations_col)
                 start_row += layer_total_weights
+            elif nn.layers[layer_index][0] == "softmax":
+                self.feedforward_softmax_layer(nn, layer_index, start_row, ACC_result_col, activations_col)
+                start_row += layer_total_weights
 
             activations_col, ACC_result_col = ACC_result_col, activations_col
 

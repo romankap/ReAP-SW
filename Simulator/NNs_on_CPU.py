@@ -167,8 +167,8 @@ class CPU_NN_Manager:
                 sum_of_exponents += math.exp(activations[num_of_net_layers-1][output_index] - max_output)
 
             for output_index in range(last_layer_neurons_num):
-                neuron_activation = activations[num_of_net_layers-1][output_index]
-                activations[num_of_net_layers-1][output_index] = math.exp(neuron_activation - max_output) / sum_of_exponents
+                biased_neuron_activation = activations[num_of_net_layers-1][output_index] - max_output
+                activations[num_of_net_layers-1][output_index] = convert_if_needed(math.exp(biased_neuron_activation) / sum_of_exponents, nn.numbersFormat)
 
         #print(net_output)
         input.pop()
@@ -177,7 +177,7 @@ class CPU_NN_Manager:
     ############################################################
     ######  Backward propagation of an output through the net
     ############################################################
-    def backPropagation(self, nn, activations, target, non_linear_function):
+    def backPropagation(self, nn, activations, target):
         num_of_net_layers = len(nn.layers)
         partial_derivatives = [None]
         deltas = [[] for x in range(len(nn.layers))] #DEBUG
@@ -197,12 +197,12 @@ class CPU_NN_Manager:
             if layer_index == num_of_net_layers-1:
                 if layer_type == "softmax":
                     curr_delta = [0] * len(activations[num_of_net_layers - 1])
-                    softmax_derivative_on_list(activations[num_of_net_layers - 1], target, curr_delta, nn.numbers_format)
+                    softmax_derivative_on_list(activations[num_of_net_layers - 1], target, curr_delta, nn.numbersFormat)
                     deltas[layer_index] = curr_delta  # DEBUG.
                 elif layer_type == "FC":
                     curr_delta = [0] * len(activations[num_of_net_layers - 1])
                     listWithListOperation(activations[num_of_net_layers - 1], target, curr_delta, '-', nn.numbersFormat)
-                    ReLU_derivative_on_list(activations[num_of_net_layers - 1], curr_delta, nn.numbers_format)
+                    ReLU_derivative_on_list(activations[num_of_net_layers - 1], curr_delta, nn.numbersFormat)
                     deltas[layer_index] = curr_delta  # DEBUG.
 
             # Deltas of hidden layers
@@ -217,7 +217,7 @@ class CPU_NN_Manager:
                         listWithScalarOperation(prev_delta[neuron_in_prev_bp_index], nn.weightsMatrices[layer_index+1][neuron_in_prev_bp_index], temp_delta, '*', nn.numbersFormat)
                         listWithListOperation(temp_delta, curr_delta, curr_delta, '+', nn.numbersFormat)
 
-                    ReLU_derivative_on_list(activations[layer_index], curr_delta, nn.numbers_format)
+                    ReLU_derivative_on_list(activations[layer_index], curr_delta, nn.numbersFormat)
                     deltas[layer_index] = curr_delta[:-1]  # DEBUG
 
             for neuron_index in range(neurons_in_layer):
@@ -266,7 +266,10 @@ class CPU_NN_Manager:
         if self.samples_trained % self.SGD_mini_batch_size == 0:  # A complete mini-batch was accumulated -> update NN weights
             for layer_index in range(num_of_net_layers - 1, 0, -1):
                 neurons_in_layer = len(nn.weightsMatrices[layer_index])
+                one_over_mini_batch_size = convert_to_non_zero_if_needed(1 / self.SGD_mini_batch_size, nn.numbersFormat)
                 for neuron_index in range(neurons_in_layer):
+                    listWithScalarOperation(one_over_mini_batch_size, self.SGD_weights[layer_index][neuron_index],
+                                            self.SGD_weights[layer_index][neuron_index], '*', nn.numbersFormat)
                     listWithListOperation(nn.weightsMatrices[layer_index][neuron_index], self.SGD_weights[layer_index][neuron_index],
                                           nn.weightsMatrices[layer_index][neuron_index], '-', nn.numbersFormat)
 

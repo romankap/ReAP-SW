@@ -308,9 +308,12 @@ class ReCAM_NN_Manager:
             self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, deltas_col)
             self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, next_deltas_col)
 
+        # TODO: Seperate to FC (ReLU) and softmax
         output_start_row = self.nn_start_row + nn.totalNumOfNetWeights
         self.storage.rowWiseOperation(output_col, self.nn_weights_column, next_deltas_col,
                                       output_start_row, output_start_row+nn.layers[-1][1]-1, '-', nn.numbersFormat)
+
+        #TODO: softmax - 1. tag zero row. 2. Write zero to tagged rows in delta column
 
         for layer_index in range(len(nn.layers)-1, 0, -1):
 

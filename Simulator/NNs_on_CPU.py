@@ -67,9 +67,34 @@ def listWithScalarOperation(scalar, list_A, res_list, operation, number_format=N
         for i in range(len(list_A)):
             res_list[i] = convert_if_needed(converted_scalar + list_A[i], number_format)
 
+################################################
+####        ReLU Function
+################################################
 
-def ReLUactivation(input):
+def ReLU_activation(input):
     return max(0, input)
+
+def ReLU_activation_on_list(input, output):
+    for i in range(len(input)):
+        output[i] = max(0, input[i])
+
+def ReLU_derivative(activation, target):
+    return 1 if activation >= 0 else 0
+
+def ReLU_derivative_on_list(activation, target, derivative):
+    for i in range(len(activation)):
+        derivative[i] = 1 if activation[i] >= 0 else 0
+
+################################################
+####        softmax Function
+################################################
+def softmax_derivative(activation, target):
+    return activation - target
+
+def softmax_derivative_on_list(activation, target, derivative):
+    for i in range(len(activation)):
+        derivative[i] = activation[i] - target[i]
+
 
 ################################################
 ####        NN & List Operations
@@ -122,7 +147,8 @@ class CPU_NN_Manager:
                     weighted_sum = convert_if_needed(weighted_sum + mul_result, nn.numbersFormat)
                     #print("Working on layer {}, neuron {}, weight {}".format(layer_index, neuron, weight))
 
-                weighted_sum = max(0, weighted_sum)
+                if layer_type == "FC":
+                    weighted_sum = max(0, weighted_sum)
                 activations[layer_index].append(weighted_sum)
 
             if layer_index!=num_of_net_layers-1:
@@ -149,7 +175,7 @@ class CPU_NN_Manager:
     ############################################################
     ######  Backward propagation of an output through the net
     ############################################################
-    def backPropagation(self, nn, activations, target):
+    def backPropagation(self, nn, activations, target, non_linear_function):
         num_of_net_layers = len(nn.layers)
         partial_derivatives = [None]
         deltas = [[] for x in range(len(nn.layers))] #DEBUG

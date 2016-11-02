@@ -46,9 +46,10 @@ class ReCAM_NN_Manager:
         self.epochs = 0
         self.samples_in_dataset = 0
 
-    def set_SGD_parameters(self, mini_batch_size, new_learning_rate):
+    def set_SGD_parameters(self, mini_batch_size, learning_rate):
         self.SGD_mini_batch_size = mini_batch_size
-        self.learning_rate = new_learning_rate
+        self.one_over_SGD_mini_batch_size = 1 / mini_batch_size
+        self.learning_rate = learning_rate
 
     ############################################################
     ######  Load NN to ReCAM
@@ -146,7 +147,7 @@ class ReCAM_NN_Manager:
     ############################################################
     ######  Feedforward an input through the net
     ############################################################
-    def feedforward_WO_activation(self, nn, layer_index, start_row, ACC_result_col, activations_col):
+    def feedforward_WO_activation_function(self, nn, layer_index, start_row, ACC_result_col, activations_col):
         bias = [1]
         neurons_in_layer = len(nn.weightsMatrices[layer_index])
         weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
@@ -194,19 +195,41 @@ class ReCAM_NN_Manager:
         weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
         layer_total_weights = neurons_in_layer * weights_per_neuron
 
-        self.feedforward_WO_activation(nn, layer_index, start_row, ACC_result_col, activations_col)
+        self.feedforward_WO_activation_function(nn, layer_index, start_row, ACC_result_col, activations_col)
 
         # ReLU: Applying 'max' function for all feedforward outputs
         self.storage.rowWiseOperationWithConstant(ACC_result_col, 0, ACC_result_col,
                               start_row + layer_total_weights, start_row + layer_total_weights+neurons_in_layer-1, 'max', nn.numbersFormat)
 
     ############################################################
-    ######  Feedforward an input through the net
+    ######  Get softmax outputs
     ############################################################
     def feedforward_softmax_layer(self, nn, layer_index, start_row, ACC_result_col, activations_col):
-        self.feedforward_FC_layer(self, nn, layer_index, start_row, ACC_result_col, activations_col)
 
-        #
+        neurons_in_layer = len(nn.weightsMatrices[layer_index])
+        weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+        layer_total_weights = neurons_in_layer * weights_per_neuron
+
+        self.feedforward_WO_activation_function(nn, layer_index, start_row, ACC_result_col, activations_col)
+
+        sums_start_row = start_row + layer_total_weights
+        sums_end_row = sums_start_row + neurons_in_layer-1
+        # 1. Get max of all sums
+        max_weighted_sum = self.storage.getScalarFromColumn(ACC_result_col, sums_start_row, sums_end_row, 'max', nn.numbersFormat)[0]
+        # Softmax is the last layer ==> activations_col is not in use.
+        self.storage.rowWiseOperationWithConstant(ACC_result_col, max_weighted_sum, activations_col,
+                                                  sums_start_row, sums_end_row, '-', nn.numbersFormat)
+
+        # Extract sums from ReCAM to send to CPU
+        sums_vector_from_ReCAM = []
+        for i in range(neurons_in_layer):
+            sums_vector_from_ReCAM.append(self.storage.crossbarArray[sums_start_row + i][activations_col])
+
+        # 2. Send sums + max to CPU
+        self.storage.calculateSoftmaxOnCPU(sums_vector_from_ReCAM, nn.numbersFormat)
+        self.storage.loadData(sums_vector_from_ReCAM, sums_start_row, nn.numbersFormat.total_bits, ACC_result_col)
+
+        # 3. Get activations vector
 
     ############################################################
     ######  Feedforward an input through the net
@@ -370,6 +393,8 @@ class ReCAM_NN_Manager:
 
         self.samples_trained += 1
         if self.samples_trained % self.SGD_mini_batch_size==0:
+            self.storage.rowWiseOperationWithConstant(SGD_sums_column, self.one_over_SGD_mini_batch_size, SGD_sums_column,
+                                                      self.nn_start_row, output_start_row - 1, '*', nn.numbersFormat)
             self.storage.rowWiseOperation(self.nn_weights_column, SGD_sums_column, self.nn_weights_column,
                                           self.nn_start_row, output_start_row - 1, '-', nn.numbersFormat)
 

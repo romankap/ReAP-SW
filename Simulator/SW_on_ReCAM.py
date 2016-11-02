@@ -85,7 +85,7 @@ def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
 
         storage.rowWiseOperation(right_AD, E_col_index, right_AD, start_row, end_row, "max")
 
-        (cycles, max_score_in_column, row_of_max_score_in_column) = storage.getScalarFromColumn(right_AD, start_row, end_row, "max")
+        (max_score_in_column, row_of_max_score_in_column) = storage.getScalarFromColumn(right_AD, start_row, end_row, "max")
         if max_score_in_column > total_max_score:
             total_max_score = max_score_in_column
             total_max_row_index = row_of_max_score_in_column-(seqA_start_row-1) #seqA starts from row 1

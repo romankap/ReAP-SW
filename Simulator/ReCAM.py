@@ -98,6 +98,7 @@ class ReCAM:
 
 
     def initialize_instructions_histogram(self):
+        #TODO: Replace all initialization by a function which will check if a value exists and will initialize it to zero if not
         self.instructionsHistogram[row_by_row_hist_name + '.+'] = 0
         self.instructionsHistogram[row_by_row_hist_name + '.-'] = 0
         self.instructionsHistogram[row_by_row_hist_name + '.*'] = 0
@@ -269,7 +270,7 @@ class ReCAM:
             cycles_per_bit = min(self.crossbarColumns[colA],self.crossbarColumns[colB]) * 2
 
         cycles_executed = cycles_per_bit * max(self.crossbarColumns[colA],self.crossbarColumns[colB])
-        self.instructionsHistogram[row_by_row_hist_name + '.' + operation]
+        self.instructionsHistogram[row_by_row_hist_name + '.' + operation] += cycles_executed
         self.advanceCycleCouter(cycles_executed)
 
 
@@ -380,14 +381,14 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Simple variable-constant arithmetic  - Add / Subtract
-    def getScalarFromColumn(self, col_index, start_row, end_row, operation):
+    def getScalarFromColumn(self, col_index, start_row, end_row, operation, numbers_format):
         max_operation_string = "max"
 
         result = 0
         result_row_index = -1
         if operation == '+':
             for i in range(start_row, end_row+1):
-                result += self.crossbarArray[i][col_index]
+                result = convert_if_needed(result + self.crossbarArray[i][col_index], numbers_format)
         elif operation == max_operation_string:
             for i in range(start_row, end_row + 1):
                 if self.crossbarArray[i][col_index] > result:
@@ -407,7 +408,23 @@ class ReCAM:
             cycles_executed = cycles_per_bit * self.crossbarColumns[col_index] * math.ceil( math.log( len(self.crossbarColumns[col_index])))
 
         self.advanceCycleCouter(cycles_executed)
-        return cycles_executed, result, result_row_index
+        return result, result_row_index
+
+    ### ------------------------------------------------------------ ###
+    ###         Calculate softmax on CPU                             ###
+    ### ------------------------------------------------------------ ###
+    def calculateSoftmaxOnCPU(self, sums_vector_from_ReCAM, numbers_format):
+        # 1. Send vector to CPU
+        # 2. Perform calclation and place result in result vector
+        for i in range(len(sums_vector_from_ReCAM)):
+            sums_vector_from_ReCAM[i] = math.exp(sums_vector_from_ReCAM[i])
+
+        sum_of_exponents = 0
+        for i in range(len(sums_vector_from_ReCAM)):
+            sum_of_exponents += sums_vector_from_ReCAM[i]
+
+        for i in range(len(sums_vector_from_ReCAM)):
+            sums_vector_from_ReCAM[i] = convert_if_needed(sums_vector_from_ReCAM[i] / sum_of_exponents, numbers_format)
 
     ### ------------------------------------------------------------ ###
     def setVerbose(self, _verbose):

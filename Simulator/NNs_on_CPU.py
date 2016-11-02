@@ -78,22 +78,24 @@ def ReLU_activation_on_list(input, output):
     for i in range(len(input)):
         output[i] = max(0, input[i])
 
-def ReLU_derivative(activation, target):
-    return 1 if activation >= 0 else 0
+def ReLU_derivative(activation, numbers_format):
+    result = 1 if activation >= 0 else 0
+    return convert_if_needed(result, numbers_format)
 
-def ReLU_derivative_on_list(activation, target, derivative):
+def ReLU_derivative_on_list(activation, derivative, numbers_format):
     for i in range(len(activation)):
-        derivative[i] = 1 if activation[i] >= 0 else 0
+        derivative[i] = 0 if activation[i] == 0 else derivative[i]
+
 
 ################################################
 ####        softmax Function
 ################################################
-def softmax_derivative(activation, target):
-    return activation - target
+def softmax_derivative(activation, target, numbers_format):
+    return convert_if_needed(activation - target ,numbers_format)
 
-def softmax_derivative_on_list(activation, target, derivative):
+def softmax_derivative_on_list(activation, target, derivative, numbers_format):
     for i in range(len(activation)):
-        derivative[i] = activation[i] - target[i]
+        derivative[i] = convert_if_needed(activation[i] - target[i] ,numbers_format)
 
 
 ################################################
@@ -187,26 +189,37 @@ class CPU_NN_Manager:
             partial_derivatives.append([])
 
         for layer_index in range(num_of_net_layers-1, 0, -1):
+            layer_type = nn.layers[layer_index][0]
             neurons_in_layer = len(nn.weightsMatrices[layer_index])
             weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
 
             # Deltas of output layer
             if layer_index == num_of_net_layers-1:
-                curr_delta = [0] * len(activations[num_of_net_layers - 1])
-                listWithListOperation(activations[num_of_net_layers - 1], target, curr_delta, '-', nn.numbersFormat)
-                deltas[layer_index] = curr_delta  # DEBUG.
+                if layer_type == "softmax":
+                    curr_delta = [0] * len(activations[num_of_net_layers - 1])
+                    softmax_derivative_on_list(activations[num_of_net_layers - 1], target, curr_delta, nn.numbers_format)
+                    deltas[layer_index] = curr_delta  # DEBUG.
+                elif layer_type == "FC":
+                    curr_delta = [0] * len(activations[num_of_net_layers - 1])
+                    listWithListOperation(activations[num_of_net_layers - 1], target, curr_delta, '-', nn.numbersFormat)
+                    ReLU_derivative_on_list(activations[num_of_net_layers - 1], curr_delta, nn.numbers_format)
+                    deltas[layer_index] = curr_delta  # DEBUG.
+
             # Deltas of hidden layers
             else:
-                neurons_in_prev_bp_layer = len(nn.weightsMatrices[layer_index+1])
-                weights_in_prev_bp_layer_neuron = len(nn.weightsMatrices[layer_index+1][0])
+                if layer_type == "FC":
+                    neurons_in_prev_bp_layer = len(nn.weightsMatrices[layer_index+1])
+                    weights_in_prev_bp_layer_neuron = len(nn.weightsMatrices[layer_index+1][0])
 
-                curr_delta = [0] * weights_in_prev_bp_layer_neuron
-                for neuron_in_prev_bp_index in reversed(range(neurons_in_prev_bp_layer)):
-                    temp_delta = [0] * weights_in_prev_bp_layer_neuron
-                    listWithScalarOperation(prev_delta[neuron_in_prev_bp_index], nn.weightsMatrices[layer_index+1][neuron_in_prev_bp_index], temp_delta, '*', nn.numbersFormat)
-                    listWithListOperation(temp_delta, curr_delta, curr_delta, '+', nn.numbersFormat)
+                    curr_delta = [0] * weights_in_prev_bp_layer_neuron
+                    for neuron_in_prev_bp_index in reversed(range(neurons_in_prev_bp_layer)):
+                        temp_delta = [0] * weights_in_prev_bp_layer_neuron
+                        listWithScalarOperation(prev_delta[neuron_in_prev_bp_index], nn.weightsMatrices[layer_index+1][neuron_in_prev_bp_index], temp_delta, '*', nn.numbersFormat)
+                        listWithListOperation(temp_delta, curr_delta, curr_delta, '+', nn.numbersFormat)
 
-                deltas[layer_index] = curr_delta[:-1]  # DEBUG
+                    ReLU_derivative_on_list(activations[layer_index], curr_delta, nn.numbers_format)
+                    deltas[layer_index] = curr_delta[:-1]  # DEBUG
+
             for neuron_index in range(neurons_in_layer):
                 neuron_pds = [0] * weights_per_neuron
                 listWithScalarOperation(curr_delta[neuron_index], activations[layer_index-1], neuron_pds, '*', nn.numbersFormat)

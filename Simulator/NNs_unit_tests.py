@@ -54,11 +54,12 @@ def test():
     ##nn = NeuralNetwork.createDebugNN(fixed_point_10bit_precision, nn_input_size) #DEBUG
     NN_on_CPU = NNs_on_CPU.initialize_NN_on_CPU(fixed_point_10bit_precision)
 
-    input_vector = [3]*nn_input_size
-    target_output = [0, 1, 2]
-    required_learning_rate = 0.02
-    mini_batch_size = 1
-    learning_rate = required_learning_rate / mini_batch_size
+    input_vectors = []
+    input_vectors.append([3]*nn_input_size)
+    input_vectors.append([-2]*nn_input_size)
+    target_output = [0.5, 0.2, 0.3]
+    learning_rate = 0.02
+    mini_batch_size = 10
 
     # --- CPU ---#
     NN_on_CPU.set_SGD_parameters(nn, mini_batch_size, learning_rate)
@@ -72,6 +73,7 @@ def test():
     NN_on_ReCAM.loadNNtoStorage(nn)
 
     for training_iteration in range(1000):
+        input_vector = input_vectors[training_iteration % 2]
         #--- ReCAM ---#
         (ReCAM_activations, ReCAM_deltas) = NN_on_ReCAM.SGD_train(nn, fixed_point_10bit_precision, nn_input_size, input_vector, target_output) #DEBUG
         ##NN_on_ReCAM.SGD_train(nn, fixed_point_10bit_precision, nn_input_size, input_vector, target_output)

@@ -367,9 +367,10 @@ class ReCAM_NN_Manager:
 
                 #Checking whether the next layer requires ReLU deltas
                 if nn.layers[layer_index-1][0] == "FC":
+                    neurons_in_prev_layer = nn.layers[layer_index-1][1]
                     # 2. tag rows with activations equal to zero
                     tagged_rows_list = self.storage.tagRowsEqualToConstant(activations_col, 0.0, layer_start_row,
-                                                                           layer_start_row + neurons_in_layer - 1)
+                                                                           layer_start_row + neurons_in_prev_layer - 1)
 
                     # 3. Write zero to tagged rows in delta column
                     self.storage.taggedRowWiseOperationWithConstant(next_deltas_col, 0.0, next_deltas_col,

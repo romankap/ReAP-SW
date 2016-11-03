@@ -20,11 +20,13 @@ from tabulate import tabulate
 ####        AUX functions & definitions
 ################################################
 max_operation_string = "max"
+write_operation_string = "write"
 
 #--- Instructions Names ---#
 row_by_row_hist_name = 'vector-vector'
 row_by_const_hist_name = 'vector-constant'
 shift_rows_hist_name = 'shift rows'
+get_scalar_from_column_hist_name = 'get scalar'
 broadcast = 'broadcast'
 
 
@@ -63,7 +65,6 @@ class ReCAM:
 
         self.instructionsHistogram = {}
         self.histogramScope = ""
-        self.initialize_instructions_histogram()
 
     ### ------------------------------------------------------------ ###
     ### ------ Cycle Counter ------- ###
@@ -97,18 +98,11 @@ class ReCAM:
         self.histogramScope = ""
 
 
-    def initialize_instructions_histogram(self):
-        #TODO: Replace all initialization by a function which will check if a value exists and will initialize it to zero if not
-        self.instructionsHistogram[row_by_row_hist_name + '.+'] = 0
-        self.instructionsHistogram[row_by_row_hist_name + '.-'] = 0
-        self.instructionsHistogram[row_by_row_hist_name + '.*'] = 0
-        self.instructionsHistogram[row_by_row_hist_name + '.max'] = 0
-        self.instructionsHistogram[row_by_const_hist_name + '.+'] = 0
-        self.instructionsHistogram[row_by_const_hist_name + '.-'] = 0
-        self.instructionsHistogram[row_by_const_hist_name + '.*'] = 0
-        self.instructionsHistogram[row_by_const_hist_name + '.max'] = 0
-        self.instructionsHistogram[shift_rows_hist_name] = 0
-        self.instructionsHistogram[broadcast] = 0
+    def addOperationToInstructionsHistogram(self, instruction_name, operations_to_add=1):
+        if instruction_name in self.instructionsHistogram:
+            self.instructionsHistogram[instruction_name] += operations_to_add
+        else:
+            self.instructionsHistogram[instruction_name] = operations_to_add
 
     def get_histogram_as_string(self):
         histogram_string = ""
@@ -119,6 +113,19 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Set the width of each column
+    def tagRowsEqualToConstant(self, col_index, const, start_row, end_row):
+        tagged_rows_list = []
+        for row_index in range(start_row, end_row+1):
+            if self.crossbarArray[row_index][col_index] == const:
+                tagged_rows_list.append(row_index)
+
+        return tagged_rows_list
+
+
+        cycles_executed = self.crossbarColumns[col_index]
+        self.advanceCycleCouter(cycles_executed)
+
+
     def tagRows(self, col_index):
         cycles_executed = self.crossbarColumns[col_index]
         self.advanceCycleCouter(cycles_executed)
@@ -175,7 +182,7 @@ class ReCAM:
 
         # cycle count
         cycles_executed = 3 * self.crossbarColumns[col_index] # 3 cycles per shifted bit
-        self.instructionsHistogram[shift_rows_hist_name] += 1
+        self.addOperationToInstructionsHistogram(shift_rows_hist_name)
         self.advanceCycleCouter(cycles_executed)
 
     #####################################################################
@@ -193,7 +200,7 @@ class ReCAM:
 
         # cycle count - several rows are piping the TAGs
         cycles_executed = (abs(distance_to_shift) + 2) * self.crossbarColumns[col_index]
-        self.instructionsHistogram[shift_rows_hist_name] += 1
+        self.addOperationToInstructionsHistogram(shift_rows_hist_name)
         self.advanceCycleCouter(cycles_executed)
 
 
@@ -213,7 +220,7 @@ class ReCAM:
 
         # cycle count
         cycles_executed = 1 + self.crossbarColumns[data_col_index]
-        self.instructionsHistogram[broadcast] += 1
+        self.addOperationToInstructionsHistogram(broadcast)
         self.advanceCycleCouter(cycles_executed)
 
     #####################################################################
@@ -270,7 +277,7 @@ class ReCAM:
             cycles_per_bit = min(self.crossbarColumns[colA],self.crossbarColumns[colB]) * 2
 
         cycles_executed = cycles_per_bit * max(self.crossbarColumns[colA],self.crossbarColumns[colB])
-        self.instructionsHistogram[row_by_row_hist_name + '.' + operation] += cycles_executed
+        self.addOperationToInstructionsHistogram(row_by_row_hist_name + '.' + operation)
         self.advanceCycleCouter(cycles_executed)
 
 
@@ -311,13 +318,12 @@ class ReCAM:
             cycles_per_bit = min(self.crossbarColumns[colA], self.crossbarColumns[colB]) * 2
 
         cycles_executed = cycles_per_bit * max(self.crossbarColumns[colA], self.crossbarColumns[colB])
-        self.instructionsHistogram[row_by_row_hist_name + '.' + operation]
+        self.addOperationToInstructionsHistogram(row_by_row_hist_name + '.' + operation)
         self.advanceCycleCouter(cycles_executed)
 
     ### ------------------------------------------------------------ ###
-    # Simple variable-constant arithmetic  - Add / Subtract
+    # Vector-scalar arithmetic  - Add / Subtract / MUL / Max
     def rowWiseOperationWithConstant(self, colA, const_scalar, res_col, start_row, end_row, operation, number_format=None):
-        max_operation_string = "max"
         if const_scalar == 0:
             converted_scalar = convert_if_needed(const_scalar, number_format)
         else:
@@ -350,9 +356,33 @@ class ReCAM:
             cycles_per_bit = 2 ** 2
 
         cycles_executed = cycles_per_bit * self.crossbarColumns[colA]
-        self.instructionsHistogram[row_by_const_hist_name + '.' + operation]
+        self.addOperationToInstructionsHistogram(row_by_const_hist_name + '.' + operation)
         self.advanceCycleCouter(cycles_executed)
 
+    ### ------------------------------------------------------------ ###
+    # Vector-scalar arithmetic  - Add / Subtract / MUL / Max
+    def taggedRowWiseOperationWithConstant(self, colA, const_scalar, res_col, tagged_rows_list, operation, number_format=None):
+        converted_const_scalar = convert_if_needed(const_scalar, number_format)
+
+        if operation == write_operation_string:
+            for row_index in tagged_rows_list:
+                self.crossbarArray[row_index][res_col] = converted_const_scalar
+        else:
+            print("!!! Unknown Operation !!!")
+            return
+
+        if self.verbose:
+            operation_to_print = "taggedRowWiseOperationWithConstant() with operation = " + operation
+            self.printArray(operation=operation_to_print)
+
+        elif operation == max_operation_string:
+            cycles_per_bit = 2
+        elif operation == write_operation_string:
+            cycles_per_bit = 1
+
+        cycles_executed = cycles_per_bit * self.crossbarColumns[colA]
+        self.addOperationToInstructionsHistogram(row_by_row_hist_name + '.' + operation)
+        self.advanceCycleCouter(cycles_executed)
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
     def MULConsecutiveRows(self, start_row, end_row, colRes, colA, colB, number_format=None):
@@ -408,6 +438,7 @@ class ReCAM:
             cycles_executed = cycles_per_bit * self.crossbarColumns[col_index] * math.ceil( math.log( len(self.crossbarColumns[col_index])))
 
         self.advanceCycleCouter(cycles_executed)
+        self.addOperationToInstructionsHistogram(get_scalar_from_column_hist_name + '.' + operation)
         return result, result_row_index
 
     ### ------------------------------------------------------------ ###
@@ -425,6 +456,8 @@ class ReCAM:
 
         for i in range(len(sums_vector_from_ReCAM)):
             sums_vector_from_ReCAM[i] = convert_if_needed(sums_vector_from_ReCAM[i] / sum_of_exponents, numbers_format)
+
+        self.addOperationToInstructionsHistogram("softmax calculation on CPU", len(sums_vector_from_ReCAM))
 
     ### ------------------------------------------------------------ ###
     def setVerbose(self, _verbose):
@@ -464,6 +497,7 @@ class ReCAM:
 
         cycles_executed = 2 + 4*(max(self.crossbarColumns[colA], self.crossbarColumns[colA]))
         self.advanceCycleCouter(cycles_executed)
+        self.addOperationToInstructionsHistogram("DNA base-pair match")
 
     '''
     You have only 4 equal combinations (0/0, 1/1, 2/2 and 3/3). The rest are mismatch.

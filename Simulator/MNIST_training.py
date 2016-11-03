@@ -10,7 +10,6 @@ import NeuralNetwork
 from NumberFormats import FixedPoint
 import NNs_on_ReCAM, NNs_on_CPU
 from MNIST_class import MNIST
-import NNs_unit_tests
 import datetime
 
 MNIST_path = 'C:\Dev\MNIST'
@@ -29,23 +28,22 @@ def train_MNIST():
     mnist_data.load_testing()
 
     nn_input_size = 784  # actual input length will be +1 due to bias
-    fixed_point_10bit_precision = FixedPoint.FixedPointFormat(9, 7)
+    fixed_point_10bit_precision = FixedPoint.FixedPointFormat(6, 10)
     nn = NeuralNetwork.createMNISTFullyConnectNN(fixed_point_10bit_precision, nn_input_size)
     NN_on_CPU = NNs_on_CPU.initialize_NN_on_CPU(fixed_point_10bit_precision)
 
     learning_rate = 0.02
-    mini_batch_size = 10
-    normalized_learning_rate = learning_rate / mini_batch_size
+    mini_batch_size = 50
 
     # --- CPU ---#
-    NN_on_CPU.set_SGD_parameters(nn, mini_batch_size, normalized_learning_rate)
+    NN_on_CPU.set_SGD_parameters(nn, mini_batch_size, learning_rate)
 
     # --- ReCAM ---#
     nn_weights_column = 0
     nn_start_row = 0
-    ReCAM_size = 524288
+    ReCAM_size = 4194304
     NN_on_ReCAM = NNs_on_ReCAM.initialize_NN_on_ReCAM(nn_weights_column, nn_start_row, ReCAM_size)
-    NN_on_ReCAM.set_SGD_parameters(mini_batch_size, normalized_learning_rate)
+    NN_on_ReCAM.set_SGD_parameters(mini_batch_size, learning_rate)
 
     NN_on_ReCAM.loadNNtoStorage(nn)
 
@@ -55,7 +53,7 @@ def train_MNIST():
             train_image = fixed_point_10bit_precision.convert_array_to_fixed_point(mnist_data.train_images[training_iteration])
             train_label = mnist_data.train_labels[training_iteration]
             target_output = [0] * 10
-            target_output[train_label] = fixed_point_10bit_precision.get_max()
+            target_output[train_label] = 1
 
             #--- ReCAM ---#
             NN_on_ReCAM.SGD_train(nn, fixed_point_10bit_precision, nn_input_size, train_image, target_output)

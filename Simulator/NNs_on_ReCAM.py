@@ -302,6 +302,7 @@ class ReCAM_NN_Manager:
         deltas_col = self.BP_deltas_column
         next_deltas_col = self.BP_next_deltas_column
         partial_derivatives_col = self.BP_partial_derivatives_column
+        num_of_layers = len(nn.layers)
 
         if self.samples_trained == 0:
             zero_vector = [0] * nn.totalNumOfNetWeights
@@ -310,13 +311,24 @@ class ReCAM_NN_Manager:
 
         # TODO: Seperate to FC (ReLU) and softmax
         output_start_row = self.nn_start_row + nn.totalNumOfNetWeights
-        self.storage.rowWiseOperation(output_col, self.nn_weights_column, next_deltas_col,
-                                      output_start_row, output_start_row+nn.layers[-1][1]-1, '-', nn.numbersFormat)
+        neurons_in_output_layer = nn.layers[num_of_layers - 1][1]
+        if nn.layers[num_of_layers-1][0] == "FC":
+            # 1. Calculate deltas for all outputs
+            self.storage.rowWiseOperation(output_col, self.nn_weights_column, next_deltas_col,
+                                            output_start_row, output_start_row + neurons_in_output_layer - 1, '-',
+                                            nn.numbersFormat)
+            # 2. tag rows with activations equal to zero
+            tagged_rows_list = self.storage.tagRowsEqualToConstant(output_col, 0.0, output_start_row, output_start_row+neurons_in_output_layer-1)
 
-        #TODO: softmax - 1. tag zero row. 2. Write zero to tagged rows in delta column
+            # 3. Write zero to tagged rows in delta column
+            self.storage.taggedRowWiseOperationWithConstant(next_deltas_col, 0.0, next_deltas_col, tagged_rows_list, 'write', nn.numbersFormat)
+        elif nn.layers[num_of_layers - 1][0] == "softmax":
+            # softmax delta - subtract output activations and target
+            # Target is in weights column
+            self.storage.rowWiseOperation(output_col, self.nn_weights_column, next_deltas_col,
+                                          output_start_row, output_start_row + neurons_in_output_layer - 1, '-', nn.numbersFormat)
 
-        for layer_index in range(len(nn.layers)-1, 0, -1):
-
+        for layer_index in reversed(range(1, num_of_layers)):
             # Layer structure
             neurons_in_layer = len(nn.weightsMatrices[layer_index])
             weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
@@ -341,6 +353,7 @@ class ReCAM_NN_Manager:
 
                 next_deltas_sum_start_row = output_start_row - weights_per_neuron
                 # Copying from deltas_col to next_deltas_col
+                # TODO: Add 'write' operation in rowWiseOperation
                 self.storage.rowWiseOperation(deltas_col, deltas_col, next_deltas_col,
                                          next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron-1, 'max', nn.numbersFormat)
 
@@ -351,6 +364,16 @@ class ReCAM_NN_Manager:
                     next_deltas_sum_start_row -= weights_per_neuron
                     self.storage.rowWiseOperation(deltas_col, next_deltas_col, next_deltas_col,
                                             next_deltas_sum_start_row, next_deltas_sum_start_row+weights_per_neuron-1, '+', nn.numbersFormat)
+
+                #Checking whether the next layer requires ReLU deltas
+                if nn.layers[layer_index-1][0] == "FC":
+                    # 2. tag rows with activations equal to zero
+                    tagged_rows_list = self.storage.tagRowsEqualToConstant(activations_col, 0.0, layer_start_row,
+                                                                           layer_start_row + neurons_in_layer - 1)
+
+                    # 3. Write zero to tagged rows in delta column
+                    self.storage.taggedRowWiseOperationWithConstant(next_deltas_col, 0.0, next_deltas_col,
+                                                                    tagged_rows_list, 'write', nn.numbersFormat)
 
             output_start_row -= total_layer_weights
             output_col, activations_col = activations_col, output_col

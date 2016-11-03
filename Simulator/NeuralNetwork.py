@@ -1,6 +1,7 @@
 import os, sys, time
 import random
 from NumberFormats import FixedPoint
+import aux_functions
 
 '''lib_path = os.path.abspath(os.path.join('swalign-0.3.3'))
 sys.path.append(lib_path)
@@ -15,7 +16,7 @@ First (last) layer is input (output) layer.
 def generateRandomInput(input_size, input_format):
     input_vector = []
     for i in range(input_size):
-        input_vector.append(input_format.convert(random.uniform(0.0001, 1)))
+        input_vector.append(input_format.convert(random.gauss(0, 0.01)))
     #bias
     input_vector.append(1)
     return input_vector
@@ -112,7 +113,7 @@ class NeuralNetwork:
 
         for i in range(new_layer_neurons):
             for j in range(prev_later_neurons):
-                self.weightsMatrices[new_layer_index][i].append(self.numbersFormat.convert(getRandomWeight(max_random_weight)))
+                self.weightsMatrices[new_layer_index][i].append(aux_functions.convert_number_to_non_zero_if_needed(getRandomWeight(max_random_weight), self.numbersFormat))
 
 
     def convert_all_results_to_format(self, layer_index):
@@ -121,12 +122,12 @@ class NeuralNetwork:
 
         for i in range(num_of_neurons):
             for j in range(weights_per_neuron):
-                self.weightsMatrices[layer_index][i][j] = self.numbersFormat.convert(self.weightsMatrices[layer_index][i][j])
+                self.weightsMatrices[layer_index][i][j] = aux_functions.convert_number_to_non_zero_if_needed(self.weightsMatrices[layer_index][i][j], self.numbersFormat)
 
 
 
 def getRandomWeight(max):
-    return random.uniform(0.00001, max)
+    return random.gauss(0, 0.01)
 
 
 def test():

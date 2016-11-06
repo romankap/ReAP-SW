@@ -35,7 +35,7 @@ def createDebugNN(weights_format, input_size):
     return nn
 
 
-def createDemoFullyConnectNN(weights_format, input_size):
+def createDemoFullyConnectNN(weights_format=None, input_size=10):
     nn = NeuralNetwork(weights_format, input_size)
     print("input layer size =", nn.layers[0])
 
@@ -59,7 +59,7 @@ def createDemoFullyConnectNN(weights_format, input_size):
 
     return nn
 
-def createMNISTFullyConnectNN(weights_format, input_size):
+def createMNISTFullyConnectNN(weights_format=None, input_size=10):
     nn = NeuralNetwork(weights_format, input_size)
     print("input layer size =", nn.layers[0])
 
@@ -71,12 +71,25 @@ def createMNISTFullyConnectNN(weights_format, input_size):
 
     return nn
 
+def createMNISTWeightExtractionNet(weights_format=None, input_size=10):
+    nn = NeuralNetwork(weights_format, input_size)
+    print("input layer size =", nn.layers[0])
+
+    nn.addLayer("FC", 300)
+    print("Added FC layer, size =", nn.layers[1])
+
+    nn.addLayer("softmax", 10)
+    print("Added output layer, size =", nn.layers[2])
+
+    return nn
+
 
 class NeuralNetwork:
-    def __init__(self, number_format, inputs = 10):
+    def __init__(self, number_format=None, inputs=10):
         random.seed()
         self.numbersFormat = number_format
-        self.weightsMax = number_format.max
+        if self.numbersFormat:
+            self.weightsMax = number_format.max
         self.layers = []
         self.layers.append(("input", inputs)) # +1 due to bias
 

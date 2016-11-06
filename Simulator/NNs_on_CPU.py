@@ -102,13 +102,13 @@ def softmax_derivative_on_list(activation, target, derivative, numbers_format):
 ####        NN & List Operations
 ################################################
 
-def initialize_NN_on_CPU(numbers_format):
+def initialize_NN_on_CPU(numbers_format=None):
     NN_on_CPU = CPU_NN_Manager(numbers_format)
 
     return NN_on_CPU
 
 class CPU_NN_Manager:
-    def __init__(self, numbers_format):
+    def __init__(self, numbers_format=None):
         self.numbersFormat = numbers_format
         self.SGD_mini_batch_size = 0
         self.learning_rate = 0.01
@@ -129,7 +129,6 @@ class CPU_NN_Manager:
     ######  Feedforward an input through the net
     ############################################################
     def feedforward(self, nn, input):
-        print("FP in NN")
         input.append(1)
 
         num_of_net_layers = len(nn.layers)
@@ -227,7 +226,6 @@ class CPU_NN_Manager:
 
             prev_delta = curr_delta
 
-        print("Finished BP in NN on CPU")
         ##return partial_derivatives
         return (partial_derivatives, deltas) #DEBUG
 

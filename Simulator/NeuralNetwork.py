@@ -71,11 +71,11 @@ def createMNISTFullyConnectNN(weights_format=None, input_size=10):
 
     return nn
 
-def createMNISTWeightExtractionNet(weights_format=None, input_size=10):
+def createMNISTWeightExtractionNet(weights_format=None, hidden_layer_size=50, input_size=10):
     nn = NeuralNetwork(weights_format, input_size)
     print("input layer size =", nn.layers[0])
 
-    nn.addLayer("FC", 300)
+    nn.addLayer("FC", hidden_layer_size)
     print("Added FC layer, size =", nn.layers[1])
 
     nn.addLayer("softmax", 10)

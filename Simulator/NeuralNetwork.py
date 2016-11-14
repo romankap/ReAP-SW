@@ -63,7 +63,7 @@ def createMNISTFullyConnectNN(weights_format=None, input_size=10):
     nn = NeuralNetwork(weights_format, input_size)
     print("input layer size =", nn.layers[0])
 
-    nn.addLayer("FC", 100)
+    nn.addLayer("FC", 1000)
     print("Added FC layer, size =", nn.layers[1])
 
     nn.addLayer("softmax", 10)
@@ -114,11 +114,9 @@ class NeuralNetwork:
     ####    Initialize all weights for a FC layer               ###
     ###############################################################
     def addFCLayer(self, prev_later_neurons, new_layer_neurons, new_layer_index):
-        max_random_weight = 1
-
         for i in range(new_layer_neurons):
             for j in range(prev_later_neurons):
-                self.weightsMatrices[new_layer_index][i].append(aux_functions.convert_number_to_non_zero_if_needed(getRandomWeight(max_random_weight), self.numbersFormat))
+                self.weightsMatrices[new_layer_index][i].append(aux_functions.convert_number_to_non_zero_if_needed(getRandomWeight(prev_later_neurons), self.numbersFormat))
 
 
     def convert_all_results_to_format(self, layer_index):
@@ -131,8 +129,8 @@ class NeuralNetwork:
 
 
 
-def getRandomWeight(max):
-    return random.gauss(0, 0.01)
+def getRandomWeight(fan_in=100):
+    return random.gauss(0, 1/fan_in)
 
 
 def test():

@@ -71,7 +71,7 @@ def get_inference_results():
     nn_input_size = 784  # actual input length will be +1 due to bias
     hidden_layer_size = 1000
     nn = NeuralNetwork.createMNISTWeightExtractionNet(hidden_layer_size=hidden_layer_size, input_size=nn_input_size)
-    NN_on_CPU = NNs_on_CPU_no_debug.initialize_NN_on_CPU()
+    NN_on_CPU = NNs_on_CPU_no_debug.initialize_NN_on_CPU(nn)
     load_weights_from_file(nn, binary_weights_filename + ".txt")
 
     number_of_correct_classifications = 0

@@ -99,7 +99,7 @@ def train_MNIST_and_extract_weights():
     hidden_layer_size = 1000
     nn = NeuralNetwork.createMNISTWeightExtractionNet(hidden_layer_size=hidden_layer_size, input_size=nn_input_size)
     net_name = str(hidden_layer_size) + "HU"
-    NN_on_CPU = NNs_on_CPU_no_debug.initialize_NN_on_CPU()
+    NN_on_CPU = NNs_on_CPU_no_debug.initialize_NN_on_CPU(nn)
 
     learning_rate = 0.01
     mini_batch_size = 10
@@ -108,7 +108,7 @@ def train_MNIST_and_extract_weights():
     NN_on_CPU.set_SGD_parameters(nn, mini_batch_size, learning_rate)
 
     total_training_epochs = 30
-    print_net_weights_to_files(nn, net_name, 0.1)
+    #print_net_weights_to_files(nn, net_name, 0.1)
     for epoch_number in range(total_training_epochs):
         ##for training_iteration in range(len(mnist_data.train_images)):
         for training_iteration in range(1000): #DEBUG
@@ -118,7 +118,8 @@ def train_MNIST_and_extract_weights():
             target_output[train_label] = 1
 
             #--- CPU ---#
-            output_layer_activations= NN_on_CPU.SGD_train(nn, train_image, target_output)[-1]
+            NN_on_CPU.SGD_train(nn, train_image, target_output)[-1]
+            output_layer_activations = NN_on_CPU.activations[-1]
             FF_output = get_MNIST_class_from_output(output_layer_activations)
             if training_iteration % 50 ==0:
                 print("Finished CPU Execution", training_iteration)

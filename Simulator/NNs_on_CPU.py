@@ -163,7 +163,7 @@ class CPU_NN_Manager:
 
                 if layer_type == "FC":
                     weighted_sum = max(0, weighted_sum)
-                    self.activations[layer_index][neuron] = weighted_sum
+                self.activations[layer_index][neuron] = weighted_sum
 
             ###if layer_index!=num_of_net_layers-1:
             ###    self.activations[layer_index].append(1) #bias exists only in input+hidden layers

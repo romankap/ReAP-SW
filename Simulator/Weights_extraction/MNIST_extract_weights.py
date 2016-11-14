@@ -19,8 +19,8 @@ numerical_output_file = None
 ###--- Handle output files ---###
 def open_weight_files(output_folder, net_name="", accuracy=None):
     now = str(datetime.datetime.now()).replace(':','-').replace(' ','.')
-    binary_output_filename = output_folder + net_name + "." + "binary."
-    numerical_output_filename = output_folder + net_name + "." + "numerical."
+    binary_output_filename = output_folder + net_name + ".binary"
+    numerical_output_filename = output_folder + net_name + ".numerical"
     if accuracy!=None:
         binary_output_filename += ".Accuracy=" + str(convert_to_short_float(accuracy))
         numerical_output_filename += ".Accuracy=" + str(convert_to_short_float(accuracy))
@@ -96,20 +96,22 @@ def train_MNIST_and_extract_weights():
     mnist_data.load_testing()
 
     nn_input_size = 784  # actual input length will be +1 due to bias
-    nn = NeuralNetwork.createMNISTWeightExtractionNet(input_size=nn_input_size)
-    net_name = "15HU"
+    hidden_layer_size = 1000
+    nn = NeuralNetwork.createMNISTWeightExtractionNet(hidden_layer_size=hidden_layer_size, input_size=nn_input_size)
+    net_name = str(hidden_layer_size) + "HU"
     NN_on_CPU = NNs_on_CPU_no_debug.initialize_NN_on_CPU()
 
-    learning_rate = 0.02
-    mini_batch_size = 50
+    learning_rate = 0.01
+    mini_batch_size = 10
 
     # --- CPU ---#
     NN_on_CPU.set_SGD_parameters(nn, mini_batch_size, learning_rate)
 
     total_training_epochs = 30
+    print_net_weights_to_files(nn, net_name, 0.1)
     for epoch_number in range(total_training_epochs):
-        for training_iteration in range(len(mnist_data.train_images)):
-        ##for training_iteration in range(20): #DEBUG
+        ##for training_iteration in range(len(mnist_data.train_images)):
+        for training_iteration in range(1000): #DEBUG
             train_image = mnist_data.train_images[training_iteration]
             train_label = mnist_data.train_labels[training_iteration]
             target_output = [0] * 10
@@ -118,8 +120,9 @@ def train_MNIST_and_extract_weights():
             #--- CPU ---#
             output_layer_activations= NN_on_CPU.SGD_train(nn, train_image, target_output)[-1]
             FF_output = get_MNIST_class_from_output(output_layer_activations)
-            print("Finished CPU Execution", training_iteration)
-            print("CPU FF output=",FF_output, ". Label=", train_label)
+            if training_iteration % 50 ==0:
+                print("Finished CPU Execution", training_iteration)
+                print("CPU FF output=",FF_output, ". Label=", train_label)
 
             # --- Verify weights match ---#
             #NNs_unit_tests.compare_NN_matrices(ReCAM_weights, nn.weightsMatrices, "weights")
@@ -130,19 +133,22 @@ def train_MNIST_and_extract_weights():
 
         number_of_correct_classifications = 0
         CPU_FF_labels = []
-        for testing_iteration in range(len(mnist_data.test_images)):
-        ##for testing_iteration in range(5): #DEBUG
-            test_image = mnist_data.test_images[testing_iteration]
-            CPU_FF_output = NN_on_CPU.feedforward(nn, test_image)[-1]
-            CPU_sample_label = get_MNIST_class_from_output(CPU_FF_output)
-            if CPU_sample_label == mnist_data.test_labels[testing_iteration]:
+        ##for testing_iteration in range(len(mnist_data.test_images)):
+        for testing_iteration in range(500): #DEBUG
+            ##test_image = mnist_data.test_images[testing_iteration]
+            test_image = mnist_data.train_images[testing_iteration] #DEBUG
+            CPU_FF_output = NN_on_CPU.feedforward(nn, test_image)
+            CPU_sample_label = get_MNIST_class_from_output(CPU_FF_output[-1])
+            ##if CPU_sample_label == mnist_data.test_labels[testing_iteration]:
+            if CPU_sample_label == mnist_data.train_labels[testing_iteration]: #DEBUG
                 number_of_correct_classifications += 1
             CPU_FF_labels.append(CPU_sample_label)
 
         fraction_of_correct_classifications = number_of_correct_classifications / len(mnist_data.test_images)
         ##aux_functions.write_to_output_file("epoch number:", epoch_number, ". CPU fraction of correct classifications:", fraction_of_correct_classifications)
         print_net_weights_to_files(nn, net_name, fraction_of_correct_classifications)
-        print("epoch number:", epoch_number, ". CPU fraction of correct classifications:", fraction_of_correct_classifications)
+        ##print("epoch number:", epoch_number, ". CPU fraction of correct classifications:", fraction_of_correct_classifications)
+        print("CPU number of correct classifications:", number_of_correct_classifications) #DEBUG
 
 
 #----- Execute -----#

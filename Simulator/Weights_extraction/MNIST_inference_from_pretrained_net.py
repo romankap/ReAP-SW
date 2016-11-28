@@ -3,6 +3,7 @@ import random
 import struct
 import copy
 from array import array
+import MNIST_extract_weights
 
 import aux_functions
 import ReCAM, Simulator
@@ -16,7 +17,7 @@ MNIST_path = 'C:\Dev\MNIST'
 binary_output_file = None
 numerical_output_file = None
 
-binary_weights_filename = "C:\\Dev\\MNIST\\Weight_extraction\\1000HU.binary.Accuracy=0.0082016-11-13.15-24-06.527449"
+binary_weights_filename = "C:\\Dev\\MNIST\\Weight_extraction\\784HU.binary.Accuracy=15.0002016-11-27.15-20-08.359151.txt"
 
 ###--- Handle output files ---###
 def load_weights_from_file(nn, weights_filename):
@@ -24,7 +25,7 @@ def load_weights_from_file(nn, weights_filename):
         file_contents = weights_file.read()
 
     bytes_counter = 0
-    for layer_index in reversed(range(1, len(nn.weightsMatrices))):
+    for layer_index in range(1, len(nn.weightsMatrices)):
         for neuron_index in range(len(nn.weightsMatrices[layer_index])):
             weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
 
@@ -72,15 +73,16 @@ def get_inference_results():
     hidden_layer_size = 1000
     nn = NeuralNetwork.createMNISTWeightExtractionNet(hidden_layer_size=hidden_layer_size, input_size=nn_input_size)
     NN_on_CPU = NNs_on_CPU_no_debug.initialize_NN_on_CPU(nn)
-    load_weights_from_file(nn, binary_weights_filename + ".txt")
+    load_weights_from_file(nn, binary_weights_filename)
+    #MNIST_extract_weights.print_net_weights_to_files(nn, str(nn_input_size) + "HU", 15)
 
     number_of_correct_classifications = 0
     CPU_FF_labels = []
     for testing_iteration in range(len(mnist_data.test_images)):
     ##for testing_iteration in range(1000): #DEBUG
         test_image = mnist_data.test_images[testing_iteration]
-        CPU_FF_output = NN_on_CPU.feedforward(nn, test_image)
-        CPU_sample_label = get_MNIST_class_from_output(CPU_FF_output[-1])
+        NN_on_CPU.feedforward(nn, test_image)
+        CPU_sample_label = get_MNIST_class_from_output(NN_on_CPU.activations[-1])
         if CPU_sample_label == mnist_data.test_labels[testing_iteration]:
             number_of_correct_classifications += 1
         CPU_FF_labels.append(CPU_sample_label)

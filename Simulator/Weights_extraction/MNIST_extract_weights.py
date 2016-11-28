@@ -1,4 +1,4 @@
-import os,sys
+import os,sys,math
 import random
 import struct
 import copy
@@ -63,7 +63,7 @@ def print_net_weights_to_files(nn, net_name, fraction_of_correct_classifications
 
     open_weight_files(MNIST_path + '\\Weight_extraction\\', net_name, fraction_of_correct_classifications)
 
-    for layer_index in reversed(range(1, len(nn.weightsMatrices))):
+    for layer_index in range(1, len(nn.weightsMatrices)):
         for neuron_index in range(len(nn.weightsMatrices[layer_index])):
             weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
 
@@ -101,7 +101,7 @@ def train_MNIST_and_extract_weights():
     net_name = str(hidden_layer_size) + "HU"
     NN_on_CPU = NNs_on_CPU_no_debug.initialize_NN_on_CPU(nn)
 
-    learning_rate = 0.01
+    learning_rate = 0.05
     mini_batch_size = 10
 
     # --- CPU ---#
@@ -109,6 +109,7 @@ def train_MNIST_and_extract_weights():
 
     total_training_epochs = 30
     #print_net_weights_to_files(nn, net_name, 0.1)
+    cross_entropy_error = 0
     for epoch_number in range(total_training_epochs):
         ##for training_iteration in range(len(mnist_data.train_images)):
         for training_iteration in range(1000): #DEBUG
@@ -121,9 +122,12 @@ def train_MNIST_and_extract_weights():
             NN_on_CPU.SGD_train(nn, train_image, target_output)[-1]
             output_layer_activations = NN_on_CPU.activations[-1]
             FF_output = get_MNIST_class_from_output(output_layer_activations)
-            if training_iteration % 50 ==0:
+            cross_entropy_error += -math.log(output_layer_activations[FF_output])
+            if training_iteration % 50 == 0:
                 print("Finished CPU Execution", training_iteration)
-                print("CPU FF output=",FF_output, ". Label=", train_label)
+                print("CPU FF output=",FF_output, ". Label=", train_label, ". Cross-Entropy Error=", cross_entropy_error/50)
+                cross_entropy_error = 0
+
 
             # --- Verify weights match ---#
             #NNs_unit_tests.compare_NN_matrices(ReCAM_weights, nn.weightsMatrices, "weights")
@@ -135,7 +139,7 @@ def train_MNIST_and_extract_weights():
         number_of_correct_classifications = 0
         CPU_FF_labels = []
         ##for testing_iteration in range(len(mnist_data.test_images)):
-        for testing_iteration in range(500): #DEBUG
+        for testing_iteration in range(1000): #DEBUG
             ##test_image = mnist_data.test_images[testing_iteration]
             test_image = mnist_data.train_images[testing_iteration] #DEBUG
             CPU_FF_output = NN_on_CPU.feedforward(nn, test_image)
@@ -145,7 +149,8 @@ def train_MNIST_and_extract_weights():
                 number_of_correct_classifications += 1
             CPU_FF_labels.append(CPU_sample_label)
 
-        fraction_of_correct_classifications = number_of_correct_classifications / len(mnist_data.test_images)
+        ##fraction_of_correct_classifications = number_of_correct_classifications / len(mnist_data.test_images)
+        fraction_of_correct_classifications = number_of_correct_classifications / 1000
         ##aux_functions.write_to_output_file("epoch number:", epoch_number, ". CPU fraction of correct classifications:", fraction_of_correct_classifications)
         print_net_weights_to_files(nn, net_name, fraction_of_correct_classifications)
         ##print("epoch number:", epoch_number, ". CPU fraction of correct classifications:", fraction_of_correct_classifications)
@@ -153,4 +158,4 @@ def train_MNIST_and_extract_weights():
 
 
 #----- Execute -----#
-train_MNIST_and_extract_weights()
+#train_MNIST_and_extract_weights()

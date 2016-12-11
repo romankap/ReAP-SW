@@ -29,6 +29,9 @@ shift_rows_hist_name = 'shift rows'
 get_scalar_from_column_hist_name = 'get scalar'
 broadcast = 'broadcast'
 
+#--- CPU Instructions Constants ---#
+CPU_softmax_cycles = 100
+
 
 #--- Number Format Conversion ---#
 
@@ -64,6 +67,7 @@ class ReCAM:
         self.frequency = 500 * 10**6
 
         self.instructionsHistogram = {}
+        self.cyclesPerInstructionsHistogram = {}
         self.histogramScope = ""
 
     ### ------------------------------------------------------------ ###
@@ -85,24 +89,28 @@ class ReCAM:
         return self.frequency
 
     ### ------------------------------------------------------------ ###
-    # Set the width of each column
-    def setColumns(self, column_widths):
-        self.crossbarColumns = column_widths
-
-    ### ------------------------------------------------------------ ###
     def set_histogram_scope(self, scope):
         self.histogramScope = scope
-
 
     def remove_histogram_scope(self, scope):
         self.histogramScope = ""
 
+    def addOperationToInstructionsHistogram(self, instruction_name, bits=32, operations_to_add=1):
+        add_to_histogram_flag = True
+        self.addOrSetInHistogram(self.instructionsHistogram, add_to_histogram_flag, instruction_name, bits, operations_to_add)
 
-    def addOperationToInstructionsHistogram(self, instruction_name, operations_to_add=1):
-        if instruction_name in self.instructionsHistogram:
-            self.instructionsHistogram[instruction_name] += operations_to_add
-        else:
-            self.instructionsHistogram[instruction_name] = operations_to_add
+    def addCyclesPerInstructionToHistogram(self, instruction_name, bits=32, cycles_per_instruction=1):
+        add_to_histogram_flag = False #set value in histogram
+        self.addOrSetInHistogram(self.cyclesPerInstructionsHistogram, add_to_histogram_flag, instruction_name, bits, cycles_per_instruction)
+
+    def addOrSetInHistogram(self, histogram, add_to_histogram_flag, instruction_name, bits, value):
+        if instruction_name not in histogram:
+            histogram[instruction_name] = {}
+
+        if bits not in histogram[instruction_name]:
+            histogram[instruction_name][bits] = value
+        elif add_to_histogram_flag:
+            histogram[instruction_name][bits] += value
 
     def get_histogram_as_string(self):
         histogram_string = ""
@@ -119,12 +127,9 @@ class ReCAM:
             if self.crossbarArray[row_index][col_index] == const:
                 tagged_rows_list.append(row_index)
 
-        return tagged_rows_list
-
-
         cycles_executed = self.crossbarColumns[col_index]
         self.advanceCycleCouter(cycles_executed)
-
+        return tagged_rows_list
 
     def tagRows(self, col_index):
         cycles_executed = self.crossbarColumns[col_index]
@@ -181,9 +186,10 @@ class ReCAM:
             self.printArray(operation=operation_to_print)
 
         # cycle count
+        self.addOperationToInstructionsHistogram(shift_rows_hist_name, self.crossbarColumns[col_index])
         cycles_executed = 3 * self.crossbarColumns[col_index] # 3 cycles per shifted bit
-        self.addOperationToInstructionsHistogram(shift_rows_hist_name)
-        self.advanceCycleCouter(cycles_executed)
+        self.addCyclesPerInstructionToHistogram(shift_rows_hist_name, self.crossbarColumns[col_index], cycles_executed)
+
 
     #####################################################################
     #####   Shift specific column values several rows up or down
@@ -199,9 +205,9 @@ class ReCAM:
             self.printArray(operation=operation_to_print)
 
         # cycle count - several rows are piping the TAGs
+        self.addOperationToInstructionsHistogram(shift_rows_hist_name, self.crossbarColumns[col_index])
         cycles_executed = (abs(distance_to_shift) + 2) * self.crossbarColumns[col_index]
-        self.addOperationToInstructionsHistogram(shift_rows_hist_name)
-        self.advanceCycleCouter(cycles_executed)
+        self.addCyclesPerInstructionToHistogram(shift_rows_hist_name, self.crossbarColumns[col_index], cycles_executed)
 
 
     #####################################################################
@@ -219,9 +225,9 @@ class ReCAM:
             self.printArray(msg="broadcastDataElement")
 
         # cycle count
+        self.addOperationToInstructionsHistogram(broadcast, self.crossbarColumns[data_col_index])
         cycles_executed = 1 + self.crossbarColumns[data_col_index]
-        self.addOperationToInstructionsHistogram(broadcast)
-        self.advanceCycleCouter(cycles_executed)
+        self.addCyclesPerInstructionToHistogram(broadcast, self.crossbarColumns[data_col_index], cycles_executed)
 
     #####################################################################
     ######      Broadcast a single element to multiple ReCAM rows
@@ -276,9 +282,11 @@ class ReCAM:
         elif operation == '*':
             cycles_per_bit = min(self.crossbarColumns[colA],self.crossbarColumns[colB]) * 2
 
-        cycles_executed = cycles_per_bit * max(self.crossbarColumns[colA],self.crossbarColumns[colB])
-        self.addOperationToInstructionsHistogram(row_by_row_hist_name + '.' + operation)
-        self.advanceCycleCouter(cycles_executed)
+        instruction_full_name = row_by_row_hist_name + '.' + operation
+        instruction_bits = max(self.crossbarColumns[colA],self.crossbarColumns[colB])
+        self.addOperationToInstructionsHistogram(instruction_full_name, instruction_bits)
+        cycles_executed = cycles_per_bit * instruction_bits
+        self.addCyclesPerInstructionToHistogram(instruction_full_name, instruction_bits, cycles_executed)
 
 
     ### ------------------------------------------------------------ ###
@@ -317,9 +325,11 @@ class ReCAM:
         elif operation == '*':
             cycles_per_bit = min(self.crossbarColumns[colA], self.crossbarColumns[colB]) * 2
 
-        cycles_executed = cycles_per_bit * max(self.crossbarColumns[colA], self.crossbarColumns[colB])
-        self.addOperationToInstructionsHistogram(row_by_row_hist_name + '.' + operation)
-        self.advanceCycleCouter(cycles_executed)
+        instruction_full_name = row_by_row_hist_name + '.' + operation
+        instruction_bits = max(self.crossbarColumns[colA], self.crossbarColumns[colB])
+        self.addOperationToInstructionsHistogram(instruction_full_name, instruction_bits)
+        cycles_executed = cycles_per_bit * instruction_bits
+        self.addCyclesPerInstructionToHistogram(instruction_full_name, instruction_bits, cycles_executed)
 
     ### ------------------------------------------------------------ ###
     # Vector-scalar arithmetic  - Add / Subtract / MUL / Max
@@ -355,9 +365,10 @@ class ReCAM:
         else:
             cycles_per_bit = 2 ** 2
 
+        instruction_full_name = row_by_const_hist_name + '.' + operation
+        self.addOperationToInstructionsHistogram(instruction_full_name, self.crossbarColumns[colA])
         cycles_executed = cycles_per_bit * self.crossbarColumns[colA]
-        self.addOperationToInstructionsHistogram(row_by_const_hist_name + '.' + operation)
-        self.advanceCycleCouter(cycles_executed)
+        self.addCyclesPerInstructionToHistogram(instruction_full_name, self.crossbarColumns[colA], cycles_executed)
 
     ### ------------------------------------------------------------ ###
     # Vector-scalar arithmetic  - Add / Subtract / MUL / Max
@@ -380,12 +391,13 @@ class ReCAM:
         elif operation == write_operation_string:
             cycles_per_bit = 1
 
+        instruction_full_name = row_by_row_hist_name + '.' + operation
+        self.addOperationToInstructionsHistogram(instruction_full_name, self.crossbarColumns[colA])
         cycles_executed = cycles_per_bit * self.crossbarColumns[colA]
-        self.addOperationToInstructionsHistogram(row_by_row_hist_name + '.' + operation)
-        self.advanceCycleCouter(cycles_executed)
+        self.addCyclesPerInstructionToHistogram(instruction_full_name, self.crossbarColumns[colA], cycles_executed)
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
-    def MULConsecutiveRows(self, start_row, end_row, colRes, colA, colB, number_format=None):
+    '''def MULConsecutiveRows(self, start_row, end_row, colRes, colA, colB, number_format=None):
         for i in range(start_row, end_row+1):
             self.crossbarArray[i][colRes] = convert_if_needed(self.crossbarArray[i][colA] * self.crossbarArray[i][colB], number_format)
 
@@ -395,10 +407,10 @@ class ReCAM:
         # cycle count
         cycles_executed = (max(self.crossbarColumns[colA], self.crossbarColumns[colA]))**2
         self.advanceCycleCouter(cycles_executed)
-
+    '''
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
-    def MULTaggedRows(self, tagged_rows_list, colRes, colA, colB, number_format=None):
+    '''def MULTaggedRows(self, tagged_rows_list, colRes, colA, colB, number_format=None):
         for row_num in tagged_rows_list:
             self.crossbarArray[row_num][colRes] = convert_if_needed(self.crossbarArray[row_num][colA] * self.crossbarArray[row_num][colB], number_format)
 
@@ -408,7 +420,7 @@ class ReCAM:
         # cycle count
         cycles_executed = (max(self.crossbarColumns[colA], self.crossbarColumns[colA]))**2
         self.advanceCycleCouter(cycles_executed)
-
+    '''
     ### ------------------------------------------------------------ ###
     # Simple variable-constant arithmetic  - Add / Subtract
     def getScalarFromColumn(self, col_index, start_row, end_row, operation, numbers_format):
@@ -437,8 +449,9 @@ class ReCAM:
             cycles_per_bit = 2 ** 2
             cycles_executed = cycles_per_bit * self.crossbarColumns[col_index] * math.ceil( math.log( len(self.crossbarColumns[col_index])))
 
-        self.advanceCycleCouter(cycles_executed)
-        self.addOperationToInstructionsHistogram(get_scalar_from_column_hist_name + '.' + operation)
+        full_instruction_name = get_scalar_from_column_hist_name + '.' + operation
+        self.addOperationToInstructionsHistogram(full_instruction_name, self.crossbarColumns[col_index])
+        self.addCyclesPerInstructionToHistogram(full_instruction_name, self.crossbarColumns[col_index], cycles_executed)
         return result, result_row_index
 
     ### ------------------------------------------------------------ ###
@@ -457,7 +470,8 @@ class ReCAM:
         for i in range(len(sums_vector_from_ReCAM)):
             sums_vector_from_ReCAM[i] = convert_if_needed(sums_vector_from_ReCAM[i] / sum_of_exponents, numbers_format)
 
-        self.addOperationToInstructionsHistogram("softmax calculation on CPU", len(sums_vector_from_ReCAM))
+        self.addOperationToInstructionsHistogram("CPU.softmax", numbers_format.total_bits, len(sums_vector_from_ReCAM))
+        self.addCyclesPerInstructionToHistogram("CPU.softmax", numbers_format.total_bits, CPU_softmax_cycles)
 
     ### ------------------------------------------------------------ ###
     def setVerbose(self, _verbose):
@@ -485,6 +499,7 @@ class ReCAM:
 
         print("\n")
 
+    # Print histogram contents
     def printHistogram(self):
         print(self.instructionsHistogram)
 

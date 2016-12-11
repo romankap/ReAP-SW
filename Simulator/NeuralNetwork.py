@@ -63,7 +63,7 @@ def createMNISTFullyConnectNN(weights_format=None, input_size=10):
     nn = NeuralNetwork(weights_format, input_size)
     print("input layer size =", nn.layers[0])
 
-    nn.addLayer("FC", 1000)
+    nn.addLayer("FC", 100)
     print("Added FC layer, size =", nn.layers[1])
 
     nn.addLayer("softmax", 10)

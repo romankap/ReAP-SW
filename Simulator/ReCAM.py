@@ -323,7 +323,7 @@ class ReCAM:
         elif operation == max_operation_string:
             cycles_per_bit = 2
         elif operation == '*':
-            cycles_per_bit = min(self.crossbarColumns[colA], self.crossbarColumns[colB]) * 2
+            cycles_per_bit = min(self.crossbarColumns[colA], self.crossbarColumns[colB]) * 16
 
         instruction_full_name = row_by_row_hist_name + '.' + operation
         instruction_bits = max(self.crossbarColumns[colA], self.crossbarColumns[colB])

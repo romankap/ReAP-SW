@@ -15,6 +15,7 @@ import sys
 lib_path = os.path.abspath(os.path.join('spfpm-1.1'))
 sys.path.append(lib_path)
 from tabulate import tabulate
+import xlsxwriter
 
 ################################################
 ####        AUX functions & definitions
@@ -23,10 +24,12 @@ max_operation_string = "max"
 write_operation_string = "write"
 
 #--- Instructions Names ---#
+load_data_element_hist_name = 'load-data-element'
 row_by_row_hist_name = 'vector-vector'
 row_by_const_hist_name = 'vector-constant'
-shift_rows_hist_name = 'shift rows'
-get_scalar_from_column_hist_name = 'get scalar'
+shift_operation_hist_name = 'shift-operation'
+shifted_rows_num_hist_name = 'shifted-rows-num'
+reduce_scalar_from_column_hist_name = 'reduce-scalar'
 broadcast = 'broadcast'
 
 #--- CPU Instructions Constants ---#
@@ -100,7 +103,7 @@ class ReCAM:
         self.addOrSetInHistogram(self.instructionsHistogram, add_to_histogram_flag, instruction_name, bits, operations_to_add)
 
     def addCyclesPerInstructionToHistogram(self, instruction_name, bits=32, cycles_per_instruction=1):
-        add_to_histogram_flag = False #set value in histogram
+        add_to_histogram_flag = True #set value in histogram
         self.addOrSetInHistogram(self.cyclesPerInstructionsHistogram, add_to_histogram_flag, instruction_name, bits, cycles_per_instruction)
 
     def addOrSetInHistogram(self, histogram, add_to_histogram_flag, instruction_name, bits, value):
@@ -155,6 +158,12 @@ class ReCAM:
             operation_to_print = "load data in column " + str(column_index)
             self.printArray(operation=operation_to_print)
 
+        # cycle count
+        elements_num = min(self.rowsNum, len(column_data))
+        self.addOperationToInstructionsHistogram(load_data_element_hist_name, self.crossbarColumns[column_index], elements_num)
+        cycles_executed = 3*elements_num   # 3 cycles per loaded element (Read, match, write)
+        self.addCyclesPerInstructionToHistogram(load_data_element_hist_name, self.crossbarColumns[column_index], cycles_executed)
+
     ### ------------------------------------------------------------ ###
     # Shift specific column values several rows up or down
     def shiftColumn(self, col_index, start_row, end_row, numOfRowsToShift=1):
@@ -186,9 +195,14 @@ class ReCAM:
             self.printArray(operation=operation_to_print)
 
         # cycle count
-        self.addOperationToInstructionsHistogram(shift_rows_hist_name, self.crossbarColumns[col_index])
+        self.addOperationToInstructionsHistogram(shift_operation_hist_name, bits=self.crossbarColumns[col_index])
+        self.addOperationToInstructionsHistogram(shifted_rows_num_hist_name, bits=self.crossbarColumns[col_index],
+                                                 operations_to_add=abs(numOfRowsToShift)-1)
         cycles_executed = 3 * self.crossbarColumns[col_index] # 3 cycles per shifted bit
-        self.addCyclesPerInstructionToHistogram(shift_rows_hist_name, self.crossbarColumns[col_index], cycles_executed)
+        self.addCyclesPerInstructionToHistogram(shift_operation_hist_name, self.crossbarColumns[col_index], cycles_executed)
+        # Every additional row to shift, beyond the first, requires 'bit-length' additional cycles
+        self.addCyclesPerInstructionToHistogram(shifted_rows_num_hist_name, self.crossbarColumns[col_index],
+                                                (abs(numOfRowsToShift)-1)*self.crossbarColumns[col_index])
 
 
     #####################################################################
@@ -205,9 +219,14 @@ class ReCAM:
             self.printArray(operation=operation_to_print)
 
         # cycle count - several rows are piping the TAGs
-        self.addOperationToInstructionsHistogram(shift_rows_hist_name, self.crossbarColumns[col_index])
-        cycles_executed = (abs(distance_to_shift) + 2) * self.crossbarColumns[col_index]
-        self.addCyclesPerInstructionToHistogram(shift_rows_hist_name, self.crossbarColumns[col_index], cycles_executed)
+        self.addOperationToInstructionsHistogram(shift_operation_hist_name, bits=self.crossbarColumns[col_index])
+        self.addOperationToInstructionsHistogram(shifted_rows_num_hist_name, bits=self.crossbarColumns[col_index],
+                                                 operations_to_add=abs(distance_to_shift)-1)
+        cycles_executed = 3 * self.crossbarColumns[col_index] # 3 cycles per shifted bit
+        self.addCyclesPerInstructionToHistogram(shift_operation_hist_name, self.crossbarColumns[col_index], cycles_executed)
+        # Every additional row to shift, beyond the first, requires 'bit-length' additional cycles
+        self.addCyclesPerInstructionToHistogram(shifted_rows_num_hist_name, self.crossbarColumns[col_index],
+                                                (abs(distance_to_shift)-1)*self.crossbarColumns[col_index])
 
 
     #####################################################################
@@ -449,7 +468,7 @@ class ReCAM:
             cycles_per_bit = 2 ** 2
             cycles_executed = cycles_per_bit * self.crossbarColumns[col_index] * math.ceil( math.log( len(self.crossbarColumns[col_index])))
 
-        full_instruction_name = get_scalar_from_column_hist_name + '.' + operation
+        full_instruction_name = reduce_scalar_from_column_hist_name + '.' + operation
         self.addOperationToInstructionsHistogram(full_instruction_name, self.crossbarColumns[col_index])
         self.addCyclesPerInstructionToHistogram(full_instruction_name, self.crossbarColumns[col_index], cycles_executed)
         return result, result_row_index
@@ -502,6 +521,70 @@ class ReCAM:
     # Print histogram contents
     def printHistogram(self):
         print(self.instructionsHistogram)
+
+    def get_bold_format(self, workbook, font_size):
+        headline_format = workbook.add_format()
+        headline_format.set_bold()
+        headline_format.set_font_size(font_size)
+        headline_format.set_align('center')
+        headline_format.set_align('vcenter')
+        return headline_format
+
+    def printHistogramsToExcel(self, total_samples, net_name="", epoch_num=""):
+        workbook = xlsxwriter.Workbook('C:\\Dev\\MNIST\\test.xlsx')
+        worksheet = workbook.add_worksheet()
+
+        #set the headline format
+        headline_format = self.get_bold_format(workbook, 12)
+
+        worksheet.set_column(0, 0, 20)
+        worksheet.set_column(5, 5, 25)
+
+        worksheet.write(0, 0, "Operation Type", headline_format)
+        worksheet.write(0, 1, "bits", headline_format)
+        worksheet.write(0, 2, "calls", headline_format)
+        worksheet.write(0, 3, "cycles", headline_format)
+
+        i=1
+        for operation_name, bits_and_calls in self.instructionsHistogram.items():
+            for bits, calls in bits_and_calls.items():
+                worksheet.write(i, 0, operation_name)
+                worksheet.write(i, 1, bits)
+                worksheet.write(i, 2, calls)
+                worksheet.write(i, 3, self.cyclesPerInstructionsHistogram[operation_name][bits])
+                i+=1
+        num_of_unique_operations = i
+
+        i+=1    # Add an empty line
+        worksheet.merge_range(i, 0, i, 1, "Global Parameters", headline_format)
+        i += 1
+        worksheet.write(i, 0, "ReCAM Frequency")
+        worksheet.write(i, 1, self.frequency)
+        ReCAM_freq_row_num = i
+        i += 1
+        worksheet.write(i, 0, "Training Set Samples")
+        worksheet.write(i, 1, total_samples)
+        total_samples_row_num = i
+
+        #########  Results #########
+        results_row = 0
+        # single sample iteration
+        worksheet.merge_range(results_row, 5, results_row, 6, "Final Results", headline_format)
+        sum_string = "D" + str(1) + ":D" + str(num_of_unique_operations)
+        results_row += 1
+
+        worksheet.write(results_row, 5, 'Cycles per 1 input sample')
+        worksheet.write(results_row, 6, '=SUM(' + sum_string + ')')
+        results_row += 1
+
+        # single epoch
+        worksheet.write(results_row, 5, 'Cycles per 1 epoch')
+        worksheet.write(results_row, 6, '=' + 'G' + str(results_row) + '*' + 'B' + str(total_samples_row_num+1) )
+        results_row += 1
+
+        # Time per epch
+        worksheet.write(results_row, 5, 'Time per 1 epoch', headline_format)
+        worksheet.write(results_row, 6, '=' + 'G' + str(results_row) + '/' + 'B' + str(ReCAM_freq_row_num+ 1), headline_format)
 
     ### ------------------------------------------------------------ ###
     # Calculate match score

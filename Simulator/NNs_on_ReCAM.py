@@ -62,7 +62,8 @@ class ReCAM_NN_Manager:
             weights_in_layer = len(nn.weightsMatrices[layer_index][0])
 
             for neuron_index in range(neurons_in_layer):
-                self.storage.loadData(nn.weightsMatrices[layer_index][neuron_index], nn_row_in_ReCAM, nn.numbersFormat.total_bits, self.nn_weights_column)
+                self.storage.loadData(nn.weightsMatrices[layer_index][neuron_index], nn_row_in_ReCAM,
+                                      nn.numbersFormat.total_bits, self.nn_weights_column, count_as_operation=False)
                 nn_row_in_ReCAM += weights_in_layer
 
         if self.storage.verbose:
@@ -171,7 +172,7 @@ class ReCAM_NN_Manager:
             self.storage.printArray(msg="after broadcast")
 
         # 2) MUL
-        self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, self.FF_MUL_column)
+        self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, self.FF_MUL_column, count_as_operation=False)
         #self.storage.MULConsecutiveRows(start_row, start_row + layer_total_weights - 1, self.FF_MUL_column, self.nn_weights_column, activations_col, nn.numbersFormat)
         self.storage.rowWiseOperation(self.nn_weights_column, activations_col, self.FF_MUL_column,
                               start_row, start_row + layer_total_weights - 1, '*', nn.numbersFormat)
@@ -181,7 +182,7 @@ class ReCAM_NN_Manager:
 
         # 3) Accumulate
 
-        self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, ACC_result_col)
+        self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, ACC_result_col, count_as_operation=False)
 
         self.parallelAccumulate(self.FF_MUL_column, ACC_result_col, ACC_result_col, start_row, weights_per_neuron,
                                 neurons_in_layer, weights_per_neuron, nn.numbersFormat)
@@ -239,13 +240,13 @@ class ReCAM_NN_Manager:
         start_row = self.nn_start_row
         activations_col = self.nn_input_column
         ACC_result_col = self.FF_accumulation_column
-        activations_to_return = [[] for x in range(number_of_nn_layers)] #DEBUG
+        ##activations_to_return = [[] for x in range(number_of_nn_layers)] #DEBUG
 
         table_header_row = ["NN", "input", "MUL", "ACC"]
         self.storage.setPrintHeader(table_header_row)
 
-        for neuron_activation_index in range(len(nn.weightsMatrices[1][0])):
-            activations_to_return[0].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col]) #DEBUG
+        ##for neuron_activation_index in range(len(nn.weightsMatrices[1][0])):
+        ##    activations_to_return[0].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col]) #DEBUG
 
         for layer_index in range(1, number_of_nn_layers):
             neurons_in_layer = len(nn.weightsMatrices[layer_index])
@@ -261,10 +262,11 @@ class ReCAM_NN_Manager:
 
             activations_col, ACC_result_col = ACC_result_col, activations_col
 
-            for neuron_activation_index in range(neurons_in_layer): #DEBUG
+            '''for neuron_activation_index in range(neurons_in_layer): #DEBUG
                 activations_to_return[layer_index].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col]) #DEBUG
             if layer_index != number_of_nn_layers-1: #DEBUG
-                activations_to_return[layer_index].append(1) #DEBUG
+                activations_to_return[layer_index].append(1) #DEBUG'''
+
 
             if self.storage.verbose:
                 self.storage.printArray(msg="feedforward Accumulate")
@@ -277,8 +279,8 @@ class ReCAM_NN_Manager:
         print("=== NN output is: ", net_output)
         aux_functions.write_to_output_file("=== NN output is: ", net_output)
 
-        return (net_output, output_col, activations_to_return) #DEBUG
-        ##return net_output, output_col
+        ##return (net_output, output_col, activations_to_return) #DEBUG
+        return net_output, output_col
 
     ############################################################
     ######  Exectute feedforward and return net's output
@@ -288,8 +290,8 @@ class ReCAM_NN_Manager:
         self.loadInputToStorage(number_format, nn_input_size, self.nn_input_column, self.nn_start_row, input_vector)
 
         #3. feedforward
-        ReCAM_FF_output, ReCAM_FF_output_col_index, ReCAM_activations = self.feedforward(nn) #DEBUG
-        ##ReCAM_FF_output, ReCAM_FF_output_col_index = self.feedforward(nn)
+        ##ReCAM_FF_output, ReCAM_FF_output_col_index, ReCAM_activations = self.feedforward(nn) #DEBUG
+        ReCAM_FF_output, ReCAM_FF_output_col_index = self.feedforward(nn)
 
         return ReCAM_FF_output
     ############################################################
@@ -306,8 +308,8 @@ class ReCAM_NN_Manager:
 
         if self.samples_trained == 0:
             zero_vector = [0] * nn.totalNumOfNetWeights
-            self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, deltas_col)
-            self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, next_deltas_col)
+            self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, deltas_col, count_as_operation=False)
+            self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, next_deltas_col, count_as_operation=False)
 
         # TODO: Seperate to FC (ReLU) and softmax
         output_start_row = self.nn_start_row + nn.totalNumOfNetWeights
@@ -405,7 +407,7 @@ class ReCAM_NN_Manager:
 
         if self.samples_trained == 0:
             zero_vector = [0] * nn.totalNumOfNetWeights
-            self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, SGD_sums_column)
+            self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, SGD_sums_column, count_as_operation=False)
 
         output_start_row = self.nn_start_row + nn.totalNumOfNetWeights
         if self.samples_trained % self.SGD_mini_batch_size == 0:  # First sample in mini-batch
@@ -438,8 +440,8 @@ class ReCAM_NN_Manager:
         self.loadTargetOutputToStorage(target_output, self.nn_start_row + nn.totalNumOfNetWeights, number_format)
 
         #3. feedforward
-        ReCAM_FP_output, ReCAM_FF_output_col_index, ReCAM_activations = self.feedforward(nn) #DEBUG
-        #EReCAM_FP_output, ReCAM_FF_output_col_index = self.feedforward(nn)
+        ##ReCAM_FP_output, ReCAM_FF_output_col_index, ReCAM_activations = self.feedforward(nn) #DEBUG
+        ReCAM_FP_output, ReCAM_FF_output_col_index = self.feedforward(nn)
 
         #4. backpropagation
         self.BP_output_column = ReCAM_FF_output_col_index

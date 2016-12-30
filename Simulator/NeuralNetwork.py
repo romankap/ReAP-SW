@@ -26,10 +26,10 @@ def createDebugNN(weights_format, input_size):
     nn = NeuralNetwork(weights_format, input_size)
     print("input layer size =", nn.layers[0])
 
-    nn.addLayer("FC", 3)
+    nn.addLayer("FC", 10)
     print("Added FC layer, size =", nn.layers[1])
 
-    nn.addLayer("softmax", 2)
+    nn.addLayer("softmax", 10)
     print("Added softmax layer, size =", nn.layers[2])
 
     return nn
@@ -42,44 +42,49 @@ def createDemoFullyConnectNN(weights_format=None, input_size=10):
     nn.addLayer("FC", 3)
     print("Added FC layer, size =", nn.layers[1])
 
-    nn.addLayer("FC", 5)
-    print("Added FC layer, size =", nn.layers[2])
 
-    nn.addLayer("FC", 3)
-    print("Added FC layer, size =", nn.layers[3])
+    #nn.addLayer("FC", 3)
+    #print("Added FC layer, size =", nn.layers[3])
 
-    nn.addLayer("FC", 6)
-    print("Added FC layer, size =", nn.layers[4])
+    #nn.addLayer("FC", 6)
+    #print("Added FC layer, size =", nn.layers[4])
 
     #nn.addLayer("softmax", 2)
     #print("Added softmax layer, size =", nn.layers[4])
 
-    nn.addLayer("softmax", 3)
-    print("Added Fc layer, size =", nn.layers[5])
+    nn.addLayer("softmax", 10)
+    print("Added Fc layer, size =", nn.layers[2])
 
     return nn
 
 def createMNISTFullyConnectNN(weights_format=None, input_size=10):
     nn = NeuralNetwork(weights_format, input_size)
-    print("input layer size =", nn.layers[0])
+    i=0
+    print("input layer size =", nn.layers[i])
+    i+=1
 
-    nn.addLayer("FC", 2500)
-    print("Added FC layer, size =", nn.layers[1])
+    #nn.addLayer("FC", 2500)
+    #print("Added FC layer, size =", nn.layers[i])
+    #i += 1
 
     nn.addLayer("FC", 2000)
-    print("Added FC layer, size =", nn.layers[2])
+    print("Added FC layer, size =", nn.layers[i])
+    i += 1
 
     nn.addLayer("FC", 1500)
-    print("Added FC layer, size =", nn.layers[3])
+    print("Added FC layer, size =", nn.layers[i])
+    i += 1
 
     nn.addLayer("FC", 1000)
-    print("Added FC layer, size =", nn.layers[4])
+    print("Added FC layer, size =", nn.layers[i])
+    i += 1
 
     nn.addLayer("FC", 500)
-    print("Added FC layer, size =", nn.layers[5])
+    print("Added FC layer, size =", nn.layers[i])
+    i += 1
 
     nn.addLayer("softmax", 10)
-    print("Added output layer, size =", nn.layers[6])
+    print("Added output layer, size =", nn.layers[i])
 
     return nn
 

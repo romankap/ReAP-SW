@@ -139,7 +139,7 @@ class ReCAM:
         self.advanceCycleCouter(cycles_executed)
 
     ### ------------------------------------------------------------ ###
-    def loadData(self, column_data, start_row, column_width, column_index=-1):
+    def loadData(self, column_data, start_row, column_width, column_index=-1, count_as_operation = True):
         if column_index == -1 or column_index+1 > self.columnsNumber:
             self.crossbarColumns.append(column_width)
             for i in range(0, self.rowsNum):
@@ -159,10 +159,11 @@ class ReCAM:
             self.printArray(operation=operation_to_print)
 
         # cycle count
-        elements_num = min(self.rowsNum, len(column_data))
-        self.addOperationToInstructionsHistogram(load_data_element_hist_name, self.crossbarColumns[column_index], elements_num)
-        cycles_executed = 3*elements_num   # 3 cycles per loaded element (Read, match, write)
-        self.addCyclesPerInstructionToHistogram(load_data_element_hist_name, self.crossbarColumns[column_index], cycles_executed)
+        if count_as_operation:
+            elements_num = min(self.rowsNum, len(column_data))
+            self.addOperationToInstructionsHistogram(load_data_element_hist_name, self.crossbarColumns[column_index], elements_num)
+            cycles_executed = 3*elements_num   # 3 cycles per loaded element (Read, match, write)
+            self.addCyclesPerInstructionToHistogram(load_data_element_hist_name, self.crossbarColumns[column_index], cycles_executed)
 
     ### ------------------------------------------------------------ ###
     # Shift specific column values several rows up or down
@@ -522,6 +523,9 @@ class ReCAM:
     def printHistogram(self):
         print(self.instructionsHistogram)
 
+    def get_col_letter(self, col_num):
+        return chr(ord('A')+col_num)
+
     def get_bold_format(self, workbook, font_size):
         headline_format = workbook.add_format()
         headline_format.set_bold()
@@ -530,20 +534,44 @@ class ReCAM:
         headline_format.set_align('vcenter')
         return headline_format
 
-    def printHistogramsToExcel(self, total_samples, net_name="", epoch_num=""):
+    def get_blue_bold_format(self, workbook, font_size):
+        headline_format = workbook.add_format()
+        headline_format.set_bold()
+        headline_format.set_font_size(font_size)
+        headline_format.set_align('center')
+        headline_format.set_align('vcenter')
+        headline_format.set_color('#5364fc')
+        return headline_format
+
+    def write_col_name_and_fig(self, worksheet, row_num, name_col_num, name_col_string, fig_col_value, custom_format=None):
+        if custom_format:
+            worksheet.write(row_num, name_col_num, name_col_string, custom_format)
+            worksheet.write(row_num, name_col_num + 1, fig_col_value, custom_format)
+        else:
+            worksheet.write(row_num, name_col_num, name_col_string)
+            worksheet.write(row_num, name_col_num + 1, fig_col_value)
+
+    def printHistogramsToExcel(self, nn, total_samples, net_name="", epoch_num=""):
         workbook = xlsxwriter.Workbook('C:\\Dev\\MNIST\\test.xlsx')
         worksheet = workbook.add_worksheet()
 
         #set the headline format
         headline_format = self.get_bold_format(workbook, 12)
+        blue_format = self.get_blue_bold_format(workbook, 12)
 
         worksheet.set_column(0, 0, 20)
         worksheet.set_column(5, 5, 25)
 
-        worksheet.write(0, 0, "Operation Type", headline_format)
-        worksheet.write(0, 1, "bits", headline_format)
-        worksheet.write(0, 2, "calls", headline_format)
-        worksheet.write(0, 3, "cycles", headline_format)
+        col_num = 0
+        worksheet.write(0, col_num, "Operation Type", headline_format)
+        col_num += 1
+        worksheet.write(0, col_num, "bits", headline_format)
+        col_num += 1
+        worksheet.write(0, col_num, "calls", headline_format)
+        col_num += 1
+        worksheet.write(0, col_num, "cycles", headline_format)
+        cycles_col_char = self.get_col_letter(col_num)
+        col_num += 1
 
         i=1
         for operation_name, bits_and_calls in self.instructionsHistogram.items():
@@ -556,6 +584,7 @@ class ReCAM:
         num_of_unique_operations = i
 
         i+=1    # Add an empty line
+        #########  Globals #########
         worksheet.merge_range(i, 0, i, 1, "Global Parameters", headline_format)
         i += 1
         worksheet.write(i, 0, "ReCAM Frequency")
@@ -568,23 +597,69 @@ class ReCAM:
 
         #########  Results #########
         results_row = 0
+        results_name_col_num = 5
+        results_name_col_letter = self.get_col_letter(results_name_col_num)
+        results_figure_col_letter = self.get_col_letter(results_name_col_num+1)
         # single sample iteration
-        worksheet.merge_range(results_row, 5, results_row, 6, "Final Results", headline_format)
-        sum_string = "D" + str(1) + ":D" + str(num_of_unique_operations)
+        worksheet.merge_range(results_row, results_name_col_num, results_row, results_name_col_num+1, "Final Results", headline_format)
         results_row += 1
 
-        worksheet.write(results_row, 5, 'Cycles per 1 input sample')
-        worksheet.write(results_row, 6, '=SUM(' + sum_string + ')')
+        # Cycles per sample
+        sum_string = cycles_col_char + str(1) + ":" + cycles_col_char + str(num_of_unique_operations)
+        self.write_col_name_and_fig(worksheet, results_row, results_name_col_num, 'Cycles per 1 input sample', '=SUM(' + sum_string + ')')
+        cycles_per_sample_row_num = results_row
+        results_row += 1
+
+        # Time per sample
+        time_per_sample_formula = '=' + results_figure_col_letter + str(results_row) + '/' + 'B' + str(ReCAM_freq_row_num + 1)
+        self.write_col_name_and_fig(worksheet, results_row, results_name_col_num, 'Time per 1 sample', time_per_sample_formula, headline_format)
         results_row += 1
 
         # single epoch
-        worksheet.write(results_row, 5, 'Cycles per 1 epoch')
-        worksheet.write(results_row, 6, '=' + 'G' + str(results_row) + '*' + 'B' + str(total_samples_row_num+1) )
+        self.write_col_name_and_fig(worksheet, results_row, results_name_col_num, 'Cycles per 1 epoch','=' + results_figure_col_letter + str(cycles_per_sample_row_num+1) + '*' + 'B' + str(total_samples_row_num+1))
         results_row += 1
 
-        # Time per epch
-        worksheet.write(results_row, 5, 'Time per 1 epoch', headline_format)
-        worksheet.write(results_row, 6, '=' + 'G' + str(results_row) + '/' + 'B' + str(ReCAM_freq_row_num+ 1), headline_format)
+        # Time per epoch
+        time_per_epoch_formula = '=' + results_figure_col_letter + str(results_row) + '/' + 'B' + str(ReCAM_freq_row_num+ 1)
+        self.write_col_name_and_fig(worksheet, results_row, results_name_col_num, 'Time per 1 epoch', time_per_epoch_formula, blue_format)
+        headline_format.set_color('black')
+
+        results_row += 2
+
+        #########  Net Parameters #########
+        net_row = results_row
+        headline_format.set_top(1)
+        worksheet.merge_range(net_row, results_name_col_num, net_row, results_name_col_num + 1, "Net Parameters",
+                              headline_format)
+        net_row += 1
+        headline_format.set_top(0)
+
+        total_net_operations=0
+        for layer_index in range(1, len(nn.layers)):
+            neurons_in_layer = len(nn.weightsMatrices[layer_index])
+            weights_in_layer = len(nn.weightsMatrices[layer_index][0])
+
+            patemeters_in_layer = neurons_in_layer * weights_in_layer
+            total_net_operations += neurons_in_layer * (2*weights_in_layer-1)
+            if layer_index < len(nn.layers)-1:
+                layer_name = "Layer " + str(layer_index)
+            else:
+                layer_name = "Output Layer"
+            self.write_col_name_and_fig(worksheet, net_row, results_name_col_num, layer_name, patemeters_in_layer)
+            net_row +=1
+
+        total_net_parameters_formula = '=SUM(' + results_figure_col_letter + str(results_row+2) + ":" + results_figure_col_letter  + str(results_row+len(nn.layers)) + ")"
+        self.write_col_name_and_fig(worksheet, net_row, results_name_col_num, "Total Net Parameters", total_net_parameters_formula, headline_format)
+
+        net_row += 1
+        #total_net_operations_formula = '=SUM(' + results_figure_col_letter + str(results_row + 2) + ":" + results_figure_col_letter + str(results_row + len(nn.layers)) + ")"
+        self.write_col_name_and_fig(worksheet, net_row, results_name_col_num, "Total FW Operations", total_net_operations, blue_format)
+
+        '''net_row += 1
+        ops_formula = '=' + results_figure_col_letter + str(total_net_operations) + "/"
+        # total_net_operations_formula = '=SUM(' + results_figure_col_letter + str(results_row + 2) + ":" + results_figure_col_letter + str(results_row + len(nn.layers)) + ")"
+        self.write_col_name_and_fig(worksheet, net_row, results_name_col_num, "ReCAM Op/s",total_net_operations, blue_format)
+        '''
 
     ### ------------------------------------------------------------ ###
     # Calculate match score

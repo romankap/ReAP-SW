@@ -441,18 +441,21 @@ class ReCAM_NN_Manager:
 
         #3. feedforward
         ##ReCAM_FP_output, ReCAM_FF_output_col_index, ReCAM_activations = self.feedforward(nn) #DEBUG
+        self.storage.set_histogram_scope("feedforward")
         ReCAM_FP_output, ReCAM_FF_output_col_index = self.feedforward(nn)
 
         #4. backpropagation
+        self.storage.set_histogram_scope("backprop")
         self.BP_output_column = ReCAM_FF_output_col_index
         activations_column = self.nn_input_column if ReCAM_FF_output_col_index == self.FF_accumulation_column else self.FF_accumulation_column
         ##self.backPropagation(nn, activations_column)
         ReCAM_deltas = self.backPropagation(nn, activations_column) #DEBUG
 
+        self.storage.remove_histogram_scope()
         #5. SGD on a single sample
         self.SGD_on_single_sample(nn)
 
-        return (ReCAM_activations, ReCAM_deltas) #DEBUG
+        #return (ReCAM_activations, ReCAM_deltas) #DEBUG
 
 
 

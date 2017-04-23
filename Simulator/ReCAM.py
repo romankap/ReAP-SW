@@ -11,6 +11,7 @@ except ImportError:
 import math
 import os
 import sys
+import datetime
 
 lib_path = os.path.abspath(os.path.join('spfpm-1.1'))
 sys.path.append(lib_path)
@@ -95,16 +96,18 @@ class ReCAM:
     def set_histogram_scope(self, scope):
         self.histogramScope = scope
 
-    def remove_histogram_scope(self, scope):
+    def remove_histogram_scope(self):
         self.histogramScope = ""
 
     def addOperationToInstructionsHistogram(self, instruction_name, bits=32, operations_to_add=1):
         add_to_histogram_flag = True
-        self.addOrSetInHistogram(self.instructionsHistogram, add_to_histogram_flag, instruction_name, bits, operations_to_add)
+        full_instruction_name = instruction_name if self.histogramScope == "" else self.histogramScope + '.' + instruction_name
+        self.addOrSetInHistogram(self.instructionsHistogram, add_to_histogram_flag, full_instruction_name, bits, operations_to_add)
 
     def addCyclesPerInstructionToHistogram(self, instruction_name, bits=32, cycles_per_instruction=1):
         add_to_histogram_flag = True #set value in histogram
-        self.addOrSetInHistogram(self.cyclesPerInstructionsHistogram, add_to_histogram_flag, instruction_name, bits, cycles_per_instruction)
+        full_instruction_name = instruction_name if self.histogramScope == "" else self.histogramScope + '.' + instruction_name
+        self.addOrSetInHistogram(self.cyclesPerInstructionsHistogram, add_to_histogram_flag, full_instruction_name, bits, cycles_per_instruction)
 
     def addOrSetInHistogram(self, histogram, add_to_histogram_flag, instruction_name, bits, value):
         if instruction_name not in histogram:
@@ -186,6 +189,9 @@ class ReCAM:
         # for j in zero_fill_range:
         #     self.crossbarArray[j][col] = 0
 
+        ## DEBUG
+        #print("Shifted %i rows in shiftColumn operation", numOfRowsToShift)
+
         if self.verbose:
             operation_to_print = "shift column " + str(col_index) + " from row "
             if numOfRowsToShift > 0:
@@ -218,6 +224,9 @@ class ReCAM:
         if self.verbose:
             operation_to_print = "shift tagged rows in column " + str(col_index) + " direction: " + ("up" if distance_to_shift>1 else "down")
             self.printArray(operation=operation_to_print)
+
+        ## DEBUG
+        print("Shifted %d rows in shiftColumnOnTaggedRows operation", distance_to_shift)
 
         # cycle count - several rows are piping the TAGs
         self.addOperationToInstructionsHistogram(shift_operation_hist_name, bits=self.crossbarColumns[col_index])
@@ -552,7 +561,8 @@ class ReCAM:
             worksheet.write(row_num, name_col_num + 1, fig_col_value)
 
     def printHistogramsToExcel(self, nn, total_samples, net_name="", epoch_num=""):
-        workbook = xlsxwriter.Workbook('C:\\Dev\\MNIST\\test.xlsx')
+        curr_time = datetime.datetime.now().isoformat().replace(':', '.')
+        workbook = xlsxwriter.Workbook('C:\\Dev\\MNIST\\test' + curr_time + '.xlsx')
         worksheet = workbook.add_worksheet()
 
         #set the headline format
@@ -580,6 +590,14 @@ class ReCAM:
                 worksheet.write(i, 1, bits)
                 worksheet.write(i, 2, calls)
                 worksheet.write(i, 3, self.cyclesPerInstructionsHistogram[operation_name][bits])
+                '''operation_without_scope = ""
+                if "." in operation_name:
+                    operation_without_scope = operation_name[operation_name.index(".") + 1:]
+                if (operation_without_scope != "") and (operation_without_scope in self.cyclesPerInstructionsHistogram):
+                    worksheet.write(i, 3, self.cyclesPerInstructionsHistogram[operation_without_scope][bits])
+                else:
+                    worksheet.write(i, 3, self.cyclesPerInstructionsHistogram[operation_name][bits])
+                '''
                 i+=1
         num_of_unique_operations = i
 
@@ -612,7 +630,7 @@ class ReCAM:
 
         # Time per sample
         time_per_sample_formula = '=' + results_figure_col_letter + str(results_row) + '/' + 'B' + str(ReCAM_freq_row_num + 1)
-        self.write_col_name_and_fig(worksheet, results_row, results_name_col_num, 'Time per 1 sample', time_per_sample_formula, headline_format)
+        self.write_col_name_and_fig(worksheet, results_row, results_name_col_num, 'Time per 1 sample (sec)', time_per_sample_formula, headline_format)
         results_row += 1
 
         # single epoch
@@ -621,7 +639,7 @@ class ReCAM:
 
         # Time per epoch
         time_per_epoch_formula = '=' + results_figure_col_letter + str(results_row) + '/' + 'B' + str(ReCAM_freq_row_num+ 1)
-        self.write_col_name_and_fig(worksheet, results_row, results_name_col_num, 'Time per 1 epoch', time_per_epoch_formula, blue_format)
+        self.write_col_name_and_fig(worksheet, results_row, results_name_col_num, 'Time per 1 epoch (sec)', time_per_epoch_formula, blue_format)
         headline_format.set_color('black')
 
         results_row += 2

@@ -226,7 +226,7 @@ class ReCAM:
             self.printArray(operation=operation_to_print)
 
         ## DEBUG
-        print("Shifted %d rows in shiftColumnOnTaggedRows operation", distance_to_shift)
+        print("Shifted %d rows in shiftColumnOnTaggedRows operation" % distance_to_shift)
 
         # cycle count - several rows are piping the TAGs
         self.addOperationToInstructionsHistogram(shift_operation_hist_name, bits=self.crossbarColumns[col_index])
@@ -667,11 +667,11 @@ class ReCAM:
             net_row +=1
 
         total_net_parameters_formula = '=SUM(' + results_figure_col_letter + str(results_row+2) + ":" + results_figure_col_letter  + str(results_row+len(nn.layers)) + ")"
-        self.write_col_name_and_fig(worksheet, net_row, results_name_col_num, "Total Net Parameters", total_net_parameters_formula, headline_format)
+        self.write_col_name_and_fig(worksheet, net_row, results_name_col_num, "Total Net Parameters", total_net_parameters_formula, blue_format)
 
         net_row += 1
         #total_net_operations_formula = '=SUM(' + results_figure_col_letter + str(results_row + 2) + ":" + results_figure_col_letter + str(results_row + len(nn.layers)) + ")"
-        self.write_col_name_and_fig(worksheet, net_row, results_name_col_num, "Total FW Operations", total_net_operations, blue_format)
+        #self.write_col_name_and_fig(worksheet, net_row, results_name_col_num, "Total training Operations", total_net_operations, blue_format)
 
         '''net_row += 1
         ops_formula = '=' + results_figure_col_letter + str(total_net_operations) + "/"

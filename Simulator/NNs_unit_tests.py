@@ -52,7 +52,7 @@ def test():
     fixed_point_10bit_precision = FixedPoint.FixedPointFormat(6,10)
     nn = NeuralNetwork.createDemoFullyConnectNN(fixed_point_10bit_precision, nn_input_size)
     ##nn = NeuralNetwork.createDebugNN(fixed_point_10bit_precision, nn_input_size) #DEBUG
-    NN_on_CPU = NNs_on_CPU.initialize_NN_on_CPU(fixed_point_10bit_precision)
+    NN_on_CPU = NNs_on_CPU.initialize_NN_on_CPU(nn, fixed_point_10bit_precision)
 
     input_vectors = []
     input_vectors.append([3]*nn_input_size)
@@ -106,4 +106,4 @@ def test():
 ####         Execute         ####
 #################################
 
-test()
+#test()

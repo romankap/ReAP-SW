@@ -226,7 +226,7 @@ class ReCAM:
             self.printArray(operation=operation_to_print)
 
         ## DEBUG
-        print("Shifted %d rows in shiftColumnOnTaggedRows operation" % distance_to_shift)
+        #print("Shifted %d rows in shiftColumnOnTaggedRows operation" % distance_to_shift)
 
         # cycle count - several rows are piping the TAGs
         self.addOperationToInstructionsHistogram(shift_operation_hist_name, bits=self.crossbarColumns[col_index])

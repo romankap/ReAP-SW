@@ -96,9 +96,9 @@ def test():
 
         # --- Verify weights match ---#
         compare_activation_vectors(ReCAM_activations, CPU_activations, "activations") #DEBUG
-        compare_activation_vectors(ReCAM_deltas, CPU_deltas, "deltas")
+        compare_activation_vectors(ReCAM_deltas, CPU_deltas, "deltas")  #DEBUG
         #compare_NN_matrices(ReCAM_pds, CPU_pds, "partial derivatives") #DEBUG
-        compare_NN_matrices(ReCAM_weights, nn.weightsMatrices, "weights")
+        compare_NN_matrices(ReCAM_weights, nn.weightsMatrices, "weights") #DEBUG
         #storage.printArray()
 
 

@@ -102,13 +102,13 @@ def softmax_derivative_on_list(activation, target, derivative, numbers_format):
 ####        NN & List Operations
 ################################################
 
-def initialize_NN_on_CPU(nn, numbers_format=None):
-    NN_on_CPU = CPU_NN_Manager(nn, numbers_format)
+def initialize_NN_on_CPU(nn, is_activations_debug_active=False, is_pds_debug_active=False, is_deltas_debug_active=False, numbers_format=None):
+    NN_on_CPU = CPU_NN_Manager(nn, is_activations_debug_active, is_pds_debug_active, is_deltas_debug_active, numbers_format)
 
     return NN_on_CPU
 
 class CPU_NN_Manager:
-    def __init__(self, neuralNet, numbers_format=None):
+    def __init__(self, neuralNet, is_activations_debug_active=False, is_pds_debug_active=False, is_deltas_debug_active=False, numbers_format=None):
         self.numbersFormat = numbers_format
         self.SGD_mini_batch_size = 0
         self.learning_rate = 0.01
@@ -117,6 +117,9 @@ class CPU_NN_Manager:
         self.epochs = 0
         self.samples_in_dataset = 0
 
+        self.is_activations_debug_active = is_activations_debug_active
+        self.is_pds_debug_active = is_pds_debug_active
+        self.is_deltas_debug_active = is_deltas_debug_active
         self.allocate_activations(neuralNet)
 
     def allocate_activations(self, nn):
@@ -192,8 +195,9 @@ class CPU_NN_Manager:
     def backPropagation(self, nn, target):
         num_of_net_layers = len(nn.layers)
         partial_derivatives = [None]
-        deltas = [[] for x in range(len(nn.layers))] #DEBUG
-        deltas[0] = None #DEBUG
+        if self.is_deltas_debug_active:
+            deltas = [[] for x in range(len(nn.layers))] #DEBUG
+            deltas[0] = None #DEBUG
 
         curr_delta = None
         prev_delta = None
@@ -210,12 +214,14 @@ class CPU_NN_Manager:
                 if layer_type == "softmax":
                     curr_delta = [0] * len(self.activations[num_of_net_layers - 1])
                     softmax_derivative_on_list(self.activations[num_of_net_layers - 1], target, curr_delta, nn.numbersFormat)
-                    deltas[layer_index] = curr_delta  # DEBUG.
+                    if self.is_deltas_debug_active:
+                        deltas[layer_index] = curr_delta  # DEBUG.
                 elif layer_type == "FC":
                     curr_delta = [0] * len(self.activations[num_of_net_layers - 1])
                     listWithListOperation(self.activations[num_of_net_layers - 1], target, curr_delta, '-', nn.numbersFormat)
                     ReLU_derivative_on_list(self.activations[num_of_net_layers - 1], curr_delta, nn.numbersFormat)
-                    deltas[layer_index] = curr_delta  # DEBUG.
+                    if self.is_deltas_debug_active:
+                        deltas[layer_index] = curr_delta  # DEBUG.
 
             # Deltas of hidden layers
             else:
@@ -230,7 +236,8 @@ class CPU_NN_Manager:
                         listWithListOperation(temp_delta, curr_delta, curr_delta, '+', nn.numbersFormat)
 
                     ReLU_derivative_on_list(self.activations[layer_index], curr_delta, nn.numbersFormat)
-                    deltas[layer_index] = curr_delta[:-1]  # DEBUG
+                    if self.is_deltas_debug_active:
+                        deltas[layer_index] = curr_delta[:-1]  # DEBUG
 
             for neuron_index in range(neurons_in_layer):
                 neuron_pds = [0] * weights_per_neuron
@@ -239,17 +246,25 @@ class CPU_NN_Manager:
 
             prev_delta = curr_delta
 
-        ##return partial_derivatives
-        return (partial_derivatives, deltas) #DEBUG
+        if self.is_deltas_debug_active:    # DEBUG
+            return (partial_derivatives, deltas)
+        else:
+            return partial_derivatives
 
     ############################################################
     ######  Backward propagation of an output through the net
     ############################################################
     def SGD_train(self, nn, NN_input, target_output):
         self.feedforward(nn, NN_input)
-        ##partial_derivatives = self.backPropagation(nn, target_output)
-        (partial_derivatives, deltas)= self.backPropagation(nn, target_output) #DEBUG
-        partial_derivatives_to_return  = copy.deepcopy(partial_derivatives) #DEBUG
+
+        if self.is_deltas_debug_active: # DEBUG
+            (partial_derivatives, deltas) = self.backPropagation(nn, target_output)
+        else:
+            partial_derivatives = self.backPropagation(nn, target_output)
+
+        if self.is_pds_debug_active:
+            partial_derivatives_to_return  = copy.deepcopy(partial_derivatives) #DEBUG
+
         num_of_net_layers = len(nn.layers)
         formatted_learning_rate = convert_to_non_zero_if_needed(self.learning_rate, nn.numbersFormat)
 
@@ -284,7 +299,11 @@ class CPU_NN_Manager:
                     listWithListOperation(nn.weightsMatrices[layer_index][neuron_index], self.SGD_weights[layer_index][neuron_index],
                                           nn.weightsMatrices[layer_index][neuron_index], '-', nn.numbersFormat)
 
-        return (partial_derivatives_to_return, self.activations, deltas) #DEBUG
+        if not self.is_deltas_debug_active:  # DEBUG
+            deltas = None
+        if not self.is_pds_debug_active:
+            partial_derivatives_to_return = None
+        return (self.activations, partial_derivatives_to_return, deltas)
 
 ############################################################
 ######  Test function

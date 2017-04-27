@@ -17,13 +17,14 @@ Every layer has number of neurons - the net will be presented as a list.
 First (last) layer is input (output) layer.
 '''
 
-def initialize_NN_on_ReCAM(nn_weights_column, nn_start_row, ReCAM_size=4096):
-    NN_on_ReCAM = ReCAM_NN_Manager(nn_weights_column, nn_start_row, ReCAM_size)
+def initialize_NN_on_ReCAM(nn_weights_column, nn_start_row, ReCAM_size=4096, is_activations_debug_active=False, is_pds_debug_active=False, is_deltas_debug_active=False):
+    NN_on_ReCAM = ReCAM_NN_Manager(nn_weights_column, nn_start_row, ReCAM_size, is_activations_debug_active, is_pds_debug_active, is_deltas_debug_active)
 
     return NN_on_ReCAM
 
 class ReCAM_NN_Manager:
-    def __init__(self, nn_weights_column, nn_start_row, ReCAM_size=4096):
+    def __init__(self, nn_weights_column, nn_start_row, ReCAM_size=4096,
+                 is_activations_debug_active=False, is_pds_debug_active=False, is_deltas_debug_active=False):
         self.storage = ReCAM.ReCAM(ReCAM_size)
         self.storage.setVerbose(False)
 
@@ -45,6 +46,10 @@ class ReCAM_NN_Manager:
         self.samples_trained = 0
         self.epochs = 0
         self.samples_in_dataset = 0
+
+        self.is_activations_debug_active = is_activations_debug_active
+        self.is_pds_debug_active = is_pds_debug_active
+        self.is_deltas_debug_active = is_deltas_debug_active
 
     def set_SGD_parameters(self, mini_batch_size, learning_rate):
         self.SGD_mini_batch_size = mini_batch_size
@@ -240,13 +245,16 @@ class ReCAM_NN_Manager:
         start_row = self.nn_start_row
         activations_col = self.nn_input_column
         ACC_result_col = self.FF_accumulation_column
-        ##activations_to_return = [[] for x in range(number_of_nn_layers)] #DEBUG
+
+        if self.is_activations_debug_active:    #DEBUG
+            activations_to_return = [[] for x in range(number_of_nn_layers)]
 
         table_header_row = ["NN", "input", "MUL", "ACC"]
         self.storage.setPrintHeader(table_header_row)
 
-        ##for neuron_activation_index in range(len(nn.weightsMatrices[1][0])):
-        ##    activations_to_return[0].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col]) #DEBUG
+        if self.is_activations_debug_active:    #DEBUG
+            for neuron_activation_index in range(len(nn.weightsMatrices[1][0])):
+                activations_to_return[0].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col])
 
         for layer_index in range(1, number_of_nn_layers):
             neurons_in_layer = len(nn.weightsMatrices[layer_index])
@@ -262,11 +270,11 @@ class ReCAM_NN_Manager:
 
             activations_col, ACC_result_col = ACC_result_col, activations_col
 
-            '''for neuron_activation_index in range(neurons_in_layer): #DEBUG
-                activations_to_return[layer_index].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col]) #DEBUG
-            if layer_index != number_of_nn_layers-1: #DEBUG
-                activations_to_return[layer_index].append(1) #DEBUG'''
-
+            if self.is_activations_debug_active:  # DEBUG
+                for neuron_activation_index in range(neurons_in_layer):
+                    activations_to_return[layer_index].append(self.storage.crossbarArray[start_row + neuron_activation_index][activations_col])
+                if layer_index != number_of_nn_layers-1:
+                    activations_to_return[layer_index].append(1)
 
             if self.storage.verbose:
                 self.storage.printArray(msg="feedforward Accumulate")
@@ -279,7 +287,8 @@ class ReCAM_NN_Manager:
         print("=== NN output is: ", net_output)
         aux_functions.write_to_output_file("=== NN output is: ", net_output)
 
-        ##return (net_output, output_col, activations_to_return) #DEBUG
+        if self.is_activations_debug_active:
+            return (net_output, output_col, activations_to_return)
         return net_output, output_col
 
     ############################################################
@@ -290,16 +299,19 @@ class ReCAM_NN_Manager:
         self.loadInputToStorage(number_format, nn_input_size, self.nn_input_column, self.nn_start_row, input_vector)
 
         #3. feedforward
-        ##ReCAM_FF_output, ReCAM_FF_output_col_index, ReCAM_activations = self.feedforward(nn) #DEBUG
-        ReCAM_FF_output, ReCAM_FF_output_col_index = self.feedforward(nn)
+        if self.is_activations_debug_active:    #DEBUG
+            ReCAM_FF_output, ReCAM_FF_output_col_index, ReCAM_activations = self.feedforward(nn) #DEBUG
+        else:
+            ReCAM_FF_output, ReCAM_FF_output_col_index = self.feedforward(nn)
 
         return ReCAM_FF_output
     ############################################################
     ######  Backward propagation of an output through the net
     ############################################################
     def backPropagation(self, nn, activations_col):
-        deltas = [[] for x in range(len(nn.layers))] #DEBUG
-        deltas[0] = None  #DEBUG
+        if self.is_deltas_debug_active: #DEBUG
+            deltas = [[] for x in range(len(nn.layers))]
+            deltas[0] = None
         output_col = self.BP_output_column
         deltas_col = self.BP_deltas_column
         next_deltas_col = self.BP_next_deltas_column
@@ -337,8 +349,9 @@ class ReCAM_NN_Manager:
             total_layer_weights = neurons_in_layer * weights_per_neuron
             layer_start_row = output_start_row - total_layer_weights
 
-            for neuron_index in range(neurons_in_layer): #DEBUG
-                deltas[layer_index].append(self.storage.crossbarArray[output_start_row+neuron_index][next_deltas_col])  # DEBUG
+            if self.is_deltas_debug_active:  # DEBUG
+                for neuron_index in range(neurons_in_layer):
+                    deltas[layer_index].append(self.storage.crossbarArray[output_start_row+neuron_index][next_deltas_col])
             # Get layer deltas to 'deltas_col'
             self.storage.broadcastData(next_deltas_col, output_start_row, neurons_in_layer,
                           layer_start_row, weights_per_neuron, deltas_col, 1, weights_per_neuron)
@@ -381,7 +394,8 @@ class ReCAM_NN_Manager:
             output_start_row -= total_layer_weights
             output_col, activations_col = activations_col, output_col
 
-        return deltas
+        if self.is_deltas_debug_active: #DEBUG
+            return deltas
     ############################################################
     ######  Update net weights - all in parallel
     ############################################################
@@ -440,23 +454,32 @@ class ReCAM_NN_Manager:
         self.loadTargetOutputToStorage(target_output, self.nn_start_row + nn.totalNumOfNetWeights, number_format)
 
         #3. feedforward
-        ##ReCAM_FP_output, ReCAM_FF_output_col_index, ReCAM_activations = self.feedforward(nn) #DEBUG
         self.storage.set_histogram_scope("feedforward")
-        ReCAM_FP_output, ReCAM_FF_output_col_index = self.feedforward(nn)
+        if self.is_activations_debug_active:    #DEBUG
+            ReCAM_FP_output, ReCAM_FF_output_col_index, ReCAM_activations = self.feedforward(nn)
+        else:
+            ReCAM_FP_output, ReCAM_FF_output_col_index = self.feedforward(nn)
 
         #4. backpropagation
         self.storage.set_histogram_scope("backprop")
         self.BP_output_column = ReCAM_FF_output_col_index
         activations_column = self.nn_input_column if ReCAM_FF_output_col_index == self.FF_accumulation_column else self.FF_accumulation_column
-        ##self.backPropagation(nn, activations_column)
-        ReCAM_deltas = self.backPropagation(nn, activations_column) #DEBUG
+
+        if self.is_deltas_debug_active: # DEBUG
+            ReCAM_deltas = self.backPropagation(nn, activations_column)
+        else:
+            self.backPropagation(nn, activations_column)
 
         self.storage.remove_histogram_scope()
         #5. SGD on a single sample
         self.SGD_on_single_sample(nn)
 
-        #return (ReCAM_activations, ReCAM_deltas) #DEBUG
-
+        if self.is_activations_debug_active and self.is_deltas_debug_active:    #DEBUG
+            return (ReCAM_activations, ReCAM_deltas)
+        elif self.is_activations_debug_active and not self.is_deltas_debug_active:    #DEBUG
+            return (ReCAM_activations, None)
+        elif not self.is_activations_debug_active and self.is_deltas_debug_active:  # DEBUG
+            return (None, ReCAM_deltas)
 
 
 ############################################################

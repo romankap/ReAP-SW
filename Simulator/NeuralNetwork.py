@@ -75,11 +75,11 @@ def createMNISTFullyConnectNN(weights_format=None, input_size=10):
     # print("Added FC layer, size =", nn.layers[i])
     # i += 1
     #
-    nn.addLayer("FC", 100)
+    nn.addLayer("FC", 30)
     print("Added FC layer, size =", nn.layers[i])
     i += 1
 
-    nn.addLayer("FC", 50)
+    nn.addLayer("FC", 20)
     print("Added FC layer, size =", nn.layers[i])
     i += 1
 

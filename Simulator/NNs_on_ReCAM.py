@@ -150,6 +150,27 @@ class ReCAM_NN_Manager:
             final_output_destination_row = start_row + num_of_parallel_sums*num_of_accumulations_per_sum + i-1
             self.storage.broadcastDataElement(res_col, accumulation_result_row, final_output_destination_row, res_col, 0, 1)
 
+    #####################################################################
+    ######      Accumulate multiple sums in parallel, row-by-row
+    #####################################################################
+    def tagThenAccumulate(self, col_A, res_col, start_row, num_of_sums, num_of_accumulations_per_sum, numbers_format):
+        accumulation_start_row = start_row
+
+        for i in range(0, num_of_sums):
+            # 1. Tag 'num_of_accumulations_per_sum' rows
+            self.storage.tagRows(res_col)
+            tagged_accumulation_rows = range(accumulation_start_row, accumulation_start_row + num_of_accumulations_per_sum)
+
+            # 2. Send to rows_range to reduction tree, then write result to output row in output column
+            is_first_accumulation = True if i == 0 else False
+
+            reduction_output_destination_row = start_row + num_of_sums * num_of_accumulations_per_sum + i
+            self.storage.pipelinedReduction(tagged_accumulation_rows, col_A, reduction_output_destination_row, res_col,
+                                            is_first_accumulation, numbers_format)
+
+            # 5. Move accumulation start row to following rows
+            accumulation_start_row += num_of_accumulations_per_sum
+
     ############################################################
     ######  Feedforward an input through the net
     ############################################################
@@ -189,8 +210,11 @@ class ReCAM_NN_Manager:
 
         self.storage.loadData(zero_vector, start_row, nn.numbersFormat.total_bits, ACC_result_col, count_as_operation=False)
 
-        self.parallelAccumulate(self.FF_MUL_column, ACC_result_col, ACC_result_col, start_row, weights_per_neuron,
-                                neurons_in_layer, weights_per_neuron, nn.numbersFormat)
+        self.tagThenAccumulate(self.FF_MUL_column, ACC_result_col, start_row, neurons_in_layer, weights_per_neuron, nn.numbersFormat)
+
+        # Old inefficient version
+        #self.parallelAccumulate(self.FF_MUL_column, ACC_result_col, ACC_result_col, start_row, weights_per_neuron,
+        #                        neurons_in_layer, weights_per_neuron, nn.numbersFormat)
 
 
     ############################################################

@@ -16,7 +16,7 @@ MNIST_path = 'C:\Dev\MNIST'
 #output_file = None
 
 is_CPU_active = True
-is_activations_debug_active = False
+is_activations_debug_active = True
 is_pds_debug_active = False
 is_deltas_debug_active = False
 

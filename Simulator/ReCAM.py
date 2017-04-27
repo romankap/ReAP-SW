@@ -31,11 +31,11 @@ row_by_const_hist_name = 'vector-constant'
 shift_operation_hist_name = 'shift-operation'
 shifted_rows_num_hist_name = 'shifted-rows-num'
 reduce_scalar_from_column_hist_name = 'reduce-scalar'
+reduction_tree_sum = 'reduction-tree-sum'
 broadcast = 'broadcast'
 
 #--- CPU Instructions Constants ---#
 CPU_softmax_cycles = 100
-
 
 #--- Number Format Conversion ---#
 
@@ -69,6 +69,8 @@ class ReCAM:
         ### ----- for Simulation Purposes--------- ###
         self.cycleCounter = 0
         self.frequency = 500 * 10**6
+        self.cycles_per_reduction_pipe_stage = 2
+        self.cycles_for_full_reduction = 30
 
         self.instructionsHistogram = {}
         self.cyclesPerInstructionsHistogram = {}
@@ -138,7 +140,7 @@ class ReCAM:
         return tagged_rows_list
 
     def tagRows(self, col_index):
-        cycles_executed = self.crossbarColumns[col_index]
+        cycles_executed = 3
         self.advanceCycleCouter(cycles_executed)
 
     ### ------------------------------------------------------------ ###
@@ -255,8 +257,12 @@ class ReCAM:
 
         # cycle count
         self.addOperationToInstructionsHistogram(broadcast, self.crossbarColumns[data_col_index])
-        cycles_executed = 1 + self.crossbarColumns[data_col_index]
+        cycles_executed = 4
         self.addCyclesPerInstructionToHistogram(broadcast, self.crossbarColumns[data_col_index], cycles_executed)
+
+        #self.addOperationToInstructionsHistogram(broadcast, self.crossbarColumns[data_col_index])
+        #cycles_executed = 1 + self.crossbarColumns[data_col_index]
+        #self.addCyclesPerInstructionToHistogram(broadcast, self.crossbarColumns[data_col_index], cycles_executed)
 
     #####################################################################
     ######      Broadcast a single element to multiple ReCAM rows
@@ -482,6 +488,26 @@ class ReCAM:
         self.addOperationToInstructionsHistogram(full_instruction_name, self.crossbarColumns[col_index])
         self.addCyclesPerInstructionToHistogram(full_instruction_name, self.crossbarColumns[col_index], cycles_executed)
         return result, result_row_index
+
+    ### ------------------------------------------------------------ ###
+    # Pipelined Reduction
+    def pipelinedReduction(self, rows_to_sum_range, input_col, output_row, output_col, is_first_accumulation, numbers_format):
+        reduction_sum = 0
+        for row_index in rows_to_sum_range:
+            reduction_sum = convert_if_needed(reduction_sum + self.crossbarArray[row_index][input_col], numbers_format)
+
+        self.crossbarArray[output_row][output_col] = reduction_sum
+
+        if is_first_accumulation:
+            full_instruction_name = reduction_tree_sum + '.' + "first"
+        else:
+            full_instruction_name = reduction_tree_sum
+
+        self.addOperationToInstructionsHistogram(full_instruction_name, self.crossbarColumns[input_col])
+        cycles_to_count = self.cycles_for_full_reduction if is_first_accumulation else self.cycles_per_reduction_pipe_stage
+        self.addCyclesPerInstructionToHistogram(full_instruction_name, self.crossbarColumns[input_col], cycles_to_count)
+
+        return reduction_sum
 
     ### ------------------------------------------------------------ ###
     ###         Calculate softmax on CPU                             ###

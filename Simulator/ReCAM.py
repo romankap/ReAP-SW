@@ -32,6 +32,7 @@ shift_operation_hist_name = 'shift-operation'
 shifted_rows_num_hist_name = 'shifted-rows-num'
 reduce_scalar_from_column_hist_name = 'reduce-scalar'
 reduction_tree_sum = 'reduction-tree-sum'
+is_reduction_tree_pipelined = False
 broadcast = 'broadcast'
 
 #--- CPU Instructions Constants ---#
@@ -498,14 +499,22 @@ class ReCAM:
 
         self.crossbarArray[output_row][output_col] = reduction_sum
 
-        if is_first_accumulation:
-            full_instruction_name = reduction_tree_sum + '.' + "first"
-        else:
+        if is_reduction_tree_pipelined: #-------- Pipelined reduction tree: output-per-cycle --------
+            if is_first_accumulation:
+                full_instruction_name = reduction_tree_sum + '.' + "first"
+            else:
+                full_instruction_name = reduction_tree_sum
+
+            self.addOperationToInstructionsHistogram(full_instruction_name, self.crossbarColumns[input_col])
+            cycles_to_count = self.cycles_for_full_reduction if is_first_accumulation else self.cycles_per_reduction_pipe_stage
+            self.addCyclesPerInstructionToHistogram(full_instruction_name, self.crossbarColumns[input_col], cycles_to_count)
+
+        else: #-------- Non-pipelined reduction tree: logN cycles per output --------
             full_instruction_name = reduction_tree_sum
 
-        self.addOperationToInstructionsHistogram(full_instruction_name, self.crossbarColumns[input_col])
-        cycles_to_count = self.cycles_for_full_reduction if is_first_accumulation else self.cycles_per_reduction_pipe_stage
-        self.addCyclesPerInstructionToHistogram(full_instruction_name, self.crossbarColumns[input_col], cycles_to_count)
+            self.addOperationToInstructionsHistogram(full_instruction_name, self.crossbarColumns[input_col])
+            cycles_to_count = self.cycles_for_full_reduction
+            self.addCyclesPerInstructionToHistogram(full_instruction_name, self.crossbarColumns[input_col], cycles_to_count)
 
         return reduction_sum
 

@@ -397,8 +397,9 @@ class ReCAM_NN_Manager:
 
                 for weight_index in range(weights_per_neuron):
                     reduction_sum_rows = range(layer_start_row+weight_index, output_start_row-1, weights_per_neuron)
+                    is_first_reduction = True if weight_index == 0 else False
                     self.storage.pipelinedReduction(reduction_sum_rows, deltas_col, layer_start_row+weight_index, next_deltas_col,
-                                                    False, nn.numbersFormat)
+                                                    is_first_reduction, nn.numbersFormat)
 
                 #----- Shift-then-add parallel accumulation -----
 

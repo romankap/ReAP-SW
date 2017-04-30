@@ -347,7 +347,6 @@ class ReCAM_NN_Manager:
             self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, deltas_col, count_as_operation=False)
             self.storage.loadData(zero_vector, self.nn_start_row, nn.numbersFormat.total_bits, next_deltas_col, count_as_operation=False)
 
-        # TODO: Seperate to FC (ReLU) and softmax
         output_start_row = self.nn_start_row + nn.totalNumOfNetWeights
         neurons_in_output_layer = nn.layers[num_of_layers - 1][1]
         if nn.layers[num_of_layers-1][0] == "FC":
@@ -391,18 +390,31 @@ class ReCAM_NN_Manager:
                                          layer_start_row, layer_start_row + total_layer_weights-1, '*', nn.numbersFormat)
 
                 next_deltas_sum_start_row = output_start_row - weights_per_neuron
-                # Copying from deltas_col to next_deltas_col
+
+                #----- Reduction-tree sum on all i-th deltas -----(all 1st deltas belong to 1st sum, 2nd deltas to 2nd sum, ...)
+                # Input: Column=deltas_col, rows= next_deltas_sum_start_row, hops=weights_per_neuron
+                # Output: Column = next_deltas_col, rows=output_start_row - neurons_per_layer*weights_per_neuron
+
+                for weight_index in range(weights_per_neuron):
+                    reduction_sum_rows = range(layer_start_row+weight_index, output_start_row-1, weights_per_neuron)
+                    self.storage.pipelinedReduction(reduction_sum_rows, deltas_col, layer_start_row+weight_index, next_deltas_col,
+                                                    False, nn.numbersFormat)
+
+                #----- Shift-then-add parallel accumulation -----
+
                 # TODO: Add 'write' operation in rowWiseOperation
-                self.storage.rowWiseOperation(deltas_col, deltas_col, next_deltas_col,
-                                         next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron-1, 'max', nn.numbersFormat)
+                # Copying from deltas_col to next_deltas_col
 
-                for neuron in range(neurons_in_layer-1):
-                    rows_to_shift = range(next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron)
-                    self.storage.shiftColumnOnTaggedRows(next_deltas_col, rows_to_shift, -weights_per_neuron)
-
-                    next_deltas_sum_start_row -= weights_per_neuron
-                    self.storage.rowWiseOperation(deltas_col, next_deltas_col, next_deltas_col,
-                                            next_deltas_sum_start_row, next_deltas_sum_start_row+weights_per_neuron-1, '+', nn.numbersFormat)
+                # self.storage.rowWiseOperation(deltas_col, deltas_col, next_deltas_col,
+                #                          next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron-1, 'max', nn.numbersFormat)
+                #
+                # for neuron in range(neurons_in_layer-1):
+                #     rows_to_shift = range(next_deltas_sum_start_row, next_deltas_sum_start_row + weights_per_neuron)
+                #     self.storage.shiftColumnOnTaggedRows(next_deltas_col, rows_to_shift, -weights_per_neuron)
+                #
+                #     next_deltas_sum_start_row -= weights_per_neuron
+                #     self.storage.rowWiseOperation(deltas_col, next_deltas_col, next_deltas_col,
+                #                             next_deltas_sum_start_row, next_deltas_sum_start_row+weights_per_neuron-1, '+', nn.numbersFormat)
 
                 #Checking whether the next layer requires ReLU deltas
                 if nn.layers[layer_index-1][0] == "FC":

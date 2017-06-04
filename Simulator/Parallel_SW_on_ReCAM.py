@@ -23,40 +23,59 @@ def getOperatingRows(iteration, offset, lenA, lenB):
 
     return start_row+offset, end_row+offset
 
-def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
+
+def place_DB_seq_in_ReCAM(storage, start_row, first_row_col, last_row_col, seq_col, seq_as_list):
+    # 1. set first_row bit
+
+    first_last_row_vec = [0] * len(seq_as_list)
+    first_last_row_vec[0] = 1
+    storage.loadData(first_last_row_vec, start_row, 1, first_row_col)
+
+    # 2. set last_row bit
+    first_last_row_vec[0] = 0
+    first_last_row_vec[len(seq_as_list)-1] = 1
+    storage.loadData(first_last_row_vec, start_row, 1, last_row_col)
+
+    # 3. load sequence
+    storage.loadData(seq_as_list, start_row, 5, seq_col)
+
+
+def Parallel_SW_on_ReCAM(DB_sequences, query_seq):
     storage = ReCAM.ReCAM(32768)
+
     verbose_prints = False
     if verbose_prints:
         print("size in bytes = ", storage.sizeInBytes)
         print("bits per row = ", storage.bitsPerRow)
 
-    seqA = list(input_seqA)
-    seqB = list(input_seqB)
-    zero_vector = [0]*(len(seqA)+len(seqB)+1)
+    num_of_DB_seqs = len(DB_sequences)
 
-    # Pushing seqB above seqA and in an adjacent column
-    # In every iteration, seqB will be pushed down and the appropriate rows will be compared
+    seqA = list(DB_sequences[0])
+    seqB = list(DB_sequences[1])
+    zero_vector = [0] * storage.rowsNum
 
-    seqA_start_row = len(seqB)
-    rev_seqB = seqB
-    rev_seqB.reverse()
-
-    #Initialization
-    seqA_col_index = 0; seqB_col_index = 1
-    storage.loadData(seqA, seqA_start_row, seqA_col_index)
-    storage.loadData(rev_seqB, 0, seqB_col_index, seqB_col_index)
-
-    for i in range(6):
-        storage.loadData(zero_vector, 0, 32)
-    table_header_row = ["seqA", "seqB", "E[]", "F[]", "AD[0]", "AD[1]", "AD[2]", "temp[]"]
-
-
-    # Definitions
-    E_col_index = 2; F_col_index = 3; first_AD_col_index = 4; last_AD_col_index = 6; temp_col_index = 7
-    total_max_score = 0; total_max_row_index = 0; total_max_col_index = 0
-
+    table_header_row = ["first_row_bit", "last_row_bit", "seqA", "seqB", "E[]", "F[]", "AD[0]", "AD[1]", "AD[2]", "temp[]"]
     storage.setVerbose(verbose_prints)
     storage.setPrintHeader(table_header_row)
+
+    # Definitions
+    first_row_col = 0; last_row_col = 1; DB_seq_col = 2
+    E_col_index = 5; F_col_index = 6; first_AD_col_index = 7; last_AD_col_index = 8; temp_col_index = 9
+    total_max_score = 0; total_max_row_index = 0; total_max_col_index = 0
+
+    for i in range(2):
+        storage.loadData(zero_vector, 0, 1) # load first/last row columns
+    for i in range(2):
+        storage.loadData(zero_vector, 0, 5) # load protein columns
+    for i in range(6):
+        storage.loadData(zero_vector, 0, 32)  # load scores columns
+
+    start_row = 0
+    for seq in DB_sequences:
+        seq_as_list = list(seq)
+        place_DB_seq_in_ReCAM(storage, start_row, first_row_col, last_row_col, DB_seq_col, seq_as_list)
+        start_row += len(seq)
+
 
     #for i in range (0, len(seqA)+len(seqB)+2):
     for i in range (0, len(seqA)+len(seqB)-1):
@@ -104,4 +123,12 @@ def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
     print("*** Performance (CUPs): ", len(seqA)*len(seqB) * storage.getFrequency()//storage.getCyclesCounter())
     return (total_max_score, total_max_row_index, total_max_col_index)
 
-#SW_on_ReCAM()
+###################################################################
+
+def test_Parallel_SW_on_ReCAM():
+    seq_list = []
+    seq_list.append("AGTTTC")
+    seq_list.append("ACCG")
+    Parallel_SW_on_ReCAM(seq_list, "TGCC")
+
+test_Parallel_SW_on_ReCAM()

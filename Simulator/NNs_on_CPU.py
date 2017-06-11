@@ -148,28 +148,63 @@ class CPU_NN_Manager:
     def feedforward(self, nn, input):
         num_of_net_layers = len(nn.layers)
         ###activations = []
-        self.activations[0] = list(input)
-        self.activations[0].append(1)
+        if nn.layers[1][0] == "conv":
+            self.activations[0] = [[]]
+            input_height = int(math.sqrt(len(input)))
+            input_width = input_height
+            for y_index in range(input_height):
+                self.activations[0][0].append(list(input[y_index*input_width: (y_index+1)*input_width]))
+        else:
+            self.activations[0] = list(input)
+            self.activations[0].append(1)
 
         for layer_index in range(1, num_of_net_layers):
             ###self.activations.append([])
             neurons_in_layer = len(nn.weightsMatrices[layer_index])
-            weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
             layer_type = nn.layers[layer_index][0]
 
-            for neuron in range(neurons_in_layer):
-                weighted_sum = 0
-                for weight in range(weights_per_neuron):
-                    mul_result = convert_if_needed(self.activations[layer_index-1][weight] * nn.weightsMatrices[layer_index][neuron][weight], nn.numbersFormat)
-                    weighted_sum = convert_if_needed(weighted_sum + mul_result, nn.numbersFormat)
-                    #print("Working on layer {}, neuron {}, weight {}".format(layer_index, neuron, weight))
+            if layer_type == "FC" or layer_type == "softmax":
+                weights_per_neuron = len(nn.weightsMatrices[layer_index][0])
+                for neuron in range(neurons_in_layer):
+                    weighted_sum = 0
+                    for weight in range(weights_per_neuron):
+                        mul_result = convert_if_needed(self.activations[layer_index-1][weight] * nn.weightsMatrices[layer_index][neuron][weight], nn.numbersFormat)
+                        weighted_sum = convert_if_needed(weighted_sum + mul_result, nn.numbersFormat)
+                        #print("Working on layer {}, neuron {}, weight {}".format(layer_index, neuron, weight))
 
-                if layer_type == "FC":
-                    weighted_sum = max(0, weighted_sum)
-                self.activations[layer_index][neuron] = weighted_sum
+                    if layer_type == "FC":
+                        weighted_sum = max(0, weighted_sum)
+                    self.activations[layer_index][neuron] = weighted_sum
 
-            ###if layer_index!=num_of_net_layers-1:
-            ###    self.activations[layer_index].append(1) #bias exists only in input+hidden layers
+            if layer_type == "conv":
+                num_of_input_feature_maps = len(self.activations[layer_index-1])
+                input_height = len(self.activations[layer_index-1][0])
+                input_width = len(self.activations[layer_index-1][0][0])
+
+                num_of_output_feature_maps = len(nn.weightsMatrices[layer_index])
+                y_dim_size_of_window = len(nn.weightsMatrices[layer_index][0])
+                x_dim_size_of_window = len(nn.weightsMatrices[layer_index][0][0])
+
+                for output_feature_map in range(num_of_output_feature_maps - 1):
+                    for input_feature_map in range(num_of_input_feature_maps):
+                        for input_y in range(input_height):
+                            for input_x in range(input_width):
+                                weighted_sum = 0
+
+                                for window_y in range(y_dim_size_of_window):
+                                    for window_x in range(x_dim_size_of_window):
+                                        conv_y_index = input_y + window_y
+                                        conv_x_index = input_x + window_x
+
+                                        if conv_y_index >= input_height:
+                                            mul_result = 0
+                                        elif conv_x_index >= input_width:
+                                            mul_result = 0
+                                        else:
+                                            conv_weight = nn.weightsMatrices[layer_index][output_feature_map][window_y][window_x]
+                                            mul_result = convert_if_needed(self.activations[layer_index - 1][input_feature_map][conv_y_index][conv_x_index] * conv_weight, nn.numbersFormat)
+                                        weighted_sum = convert_if_needed(weighted_sum + mul_result, nn.numbersFormat)
+                                weighted_sum = convert_if_needed(weighted_sum + nn.weightsMatrices[layer_index][num_of_output_feature_maps-1], nn.numbersFormat)
 
         if nn.layers[num_of_net_layers-1][0] == "softmax":
             last_layer_neurons_num = nn.layers[num_of_net_layers - 1][1]

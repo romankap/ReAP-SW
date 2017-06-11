@@ -15,8 +15,9 @@ import datetime
 MNIST_path = 'C:\Dev\MNIST'
 #output_file = None
 
+is_ReCAM_active = False
 is_CPU_active = True
-is_activations_debug_active = True
+is_activations_debug_active = False
 is_pds_debug_active = False
 is_deltas_debug_active = False
 
@@ -35,8 +36,9 @@ def train_MNIST():
     mini_batch_size = 50
     nn_input_size = 784  # actual input length will be +1 due to bias
     fixed_point_10bit_precision = FixedPoint.FixedPointFormat(6, 10)
-    nn = NeuralNetwork.createMNISTFullyConnectNN(fixed_point_10bit_precision, nn_input_size)
+    ##nn = NeuralNetwork.createMNISTFullyConnectNN(fixed_point_10bit_precision, nn_input_size)
     ##nn = NeuralNetwork.createDemoFullyConnectNN(fixed_point_10bit_precision, nn_input_size)
+    nn = NeuralNetwork.createMNISTConvNet(fixed_point_10bit_precision, nn_input_size)
 
     # --- CPU ---#
     if is_CPU_active:
@@ -44,13 +46,14 @@ def train_MNIST():
         NN_on_CPU.set_SGD_parameters(nn, mini_batch_size, learning_rate)
 
     # --- ReCAM ---#
-    nn_weights_column = 0
-    nn_start_row = 0
-    ReCAM_size = 419430400
-    NN_on_ReCAM = NNs_on_ReCAM.initialize_NN_on_ReCAM(nn_weights_column, nn_start_row, ReCAM_size, is_activations_debug_active, is_pds_debug_active, is_deltas_debug_active)
-    NN_on_ReCAM.set_SGD_parameters(mini_batch_size, learning_rate)
+    if is_ReCAM_active:
+        nn_weights_column = 0
+        nn_start_row = 0
+        ReCAM_size = 419430400
+        NN_on_ReCAM = NNs_on_ReCAM.initialize_NN_on_ReCAM(nn_weights_column, nn_start_row, ReCAM_size, is_activations_debug_active, is_pds_debug_active, is_deltas_debug_active)
+        NN_on_ReCAM.set_SGD_parameters(mini_batch_size, learning_rate)
 
-    NN_on_ReCAM.loadNNtoStorage(nn)
+        NN_on_ReCAM.loadNNtoStorage(nn)
 
     total_training_epochs = 100
     epoch_number = 0
@@ -63,18 +66,20 @@ def train_MNIST():
     target_output[train_label] = 1
 
     #--- ReCAM ---#
-    if is_activations_debug_active or is_deltas_debug_active:
-        (ReCAM_activations, ReCAM_deltas) = NN_on_ReCAM.SGD_train(nn, fixed_point_10bit_precision, nn_input_size, train_image, target_output)
-    else:
-        NN_on_ReCAM.SGD_train(nn, fixed_point_10bit_precision, nn_input_size, train_image, target_output)
+    if is_ReCAM_active:
+        if is_activations_debug_active or is_deltas_debug_active:
+            (ReCAM_activations, ReCAM_deltas) = NN_on_ReCAM.SGD_train(nn, fixed_point_10bit_precision, nn_input_size, train_image, target_output)
+        else:
+            NN_on_ReCAM.SGD_train(nn, fixed_point_10bit_precision, nn_input_size, train_image, target_output)
 
-    if is_CPU_active:
+    if is_CPU_active and is_ReCAM_active:
         ReCAM_weights = NN_on_ReCAM.get_NN_matrices(nn, nn_weights_column, nn_start_row)
 
     if is_pds_debug_active:
         ReCAM_pds = NN_on_ReCAM.get_NN_matrices(nn, NN_on_ReCAM.BP_partial_derivatives_column, nn_start_row)
 
-    NN_on_ReCAM.storage.printHistogramsToExcel(nn, len(mnist_data.train_images))
+    if is_ReCAM_active:
+        NN_on_ReCAM.storage.printHistogramsToExcel(nn, len(mnist_data.train_images))
 
     print("Finished ReCAM Execution", training_iteration)
 
@@ -87,7 +92,8 @@ def train_MNIST():
 
         print("Finished CPU Execution", training_iteration)
         # --- Verify weights match ---#
-        NNs_unit_tests.compare_NN_matrices(ReCAM_weights, nn.weightsMatrices, "weights")
+        if is_ReCAM_active:
+            NNs_unit_tests.compare_NN_matrices(ReCAM_weights, nn.weightsMatrices, "weights")
 
         if is_activations_debug_active:
             NNs_unit_tests.compare_activation_vectors(ReCAM_activations, CPU_activations, "activations")

@@ -57,29 +57,49 @@ def createDemoFullyConnectNN(weights_format=None, input_size=10):
 
     return nn
 
+def createMNISTConvNet(weights_format=None, input_size=10):
+    nn = NeuralNetwork(weights_format, input_size)
+    i = 0
+    print("input layer size =", nn.layers[i])
+    i += 1
+
+    # nn.addLayer("FC", 2500)
+    # print("Added FC layer, size =", nn.layers[i])
+    # i += 1
+
+    nn.addLayer("conv", 32, 5, 5)
+    print("Added FC layer, size =", nn.layers[i])
+    i += 1
+
+    nn.addLayer("softmax", 10)
+    print("Added output layer, size =", nn.layers[i])
+
+    return nn
+
+
 def createMNISTFullyConnectNN(weights_format=None, input_size=10):
     nn = NeuralNetwork(weights_format, input_size)
     i=0
     print("input layer size =", nn.layers[i])
     i+=1
 
-    #nn.addLayer("FC", 2500)
-    #print("Added FC layer, size =", nn.layers[i])
-    #i += 1
-
-    # nn.addLayer("FC", 2000)
+    # nn.addLayer("FC", 2500)
     # print("Added FC layer, size =", nn.layers[i])
     # i += 1
 
-    # nn.addLayer("FC", 1500)
-    # print("Added FC layer, size =", nn.layers[i])
-    # i += 1
-    #
-    nn.addLayer("FC", 30)
+    nn.addLayer("FC", 2000)
     print("Added FC layer, size =", nn.layers[i])
     i += 1
 
-    nn.addLayer("FC", 20)
+    nn.addLayer("FC", 1500)
+    print("Added FC layer, size =", nn.layers[i])
+    i += 1
+
+    nn.addLayer("FC", 1000)
+    print("Added FC layer, size =", nn.layers[i])
+    i += 1
+
+    nn.addLayer("FC", 500)
     print("Added FC layer, size =", nn.layers[i])
     i += 1
 
@@ -115,14 +135,23 @@ class NeuralNetwork:
         self.totalNumOfNetWeights = 0
 
 
-    def addLayer(self, type, new_layer_neurons):
+    def addLayer(self, type, new_layer_neurons, conv_y_dim_size=0, conv_x_dim_size=0):
         weights_per_neuron = self.layers[len(self.layers)-1][1] + 1 # +1 due to bias
+        layer_index = len(self.layers)-1
 
-        self.weightsMatrices.append([[] for x in range(new_layer_neurons)]) #append new layer weights
-        self.layers.append((type, new_layer_neurons))
+        if type == "conv":
+            num_of_curr_layer_feature_maps = new_layer_neurons
+            num_of_prev_layer_feature_maps = len(self.weightsMatrices[layer_index-1]) if layer_index!=0 else 1
+            self.weightsMatrices.append([[[[] for y in range(conv_y_dim_size)] for output_feature_map in range(num_of_curr_layer_feature_maps)] for input_feature_map in range(num_of_prev_layer_feature_maps) ])  # append new layer weights
+            #self.weightsMatrices[-1].append(0)
+            self.layers.append((type, num_of_curr_layer_feature_maps))
+            self.addConvLayer(num_of_prev_layer_feature_maps, layer_index, num_of_curr_layer_feature_maps, conv_y_dim_size, conv_x_dim_size)
 
         if type == "FC" or type == "output" or type == "softmax":
-            self.addFCLayer(weights_per_neuron, new_layer_neurons, len(self.layers)-1)
+            self.weightsMatrices.append([[] for x in range(new_layer_neurons)])  # append new layer weights
+            self.layers.append((type, new_layer_neurons))
+
+            self.addFCLayer(weights_per_neuron, new_layer_neurons, layer_index)
             self.totalNumOfNetWeights += weights_per_neuron*new_layer_neurons
         else:
             print("Unknown layer type")
@@ -130,10 +159,18 @@ class NeuralNetwork:
     ###############################################################
     ####    Initialize all weights for a FC layer               ###
     ###############################################################
-    def addFCLayer(self, prev_later_neurons, new_layer_neurons, new_layer_index):
+    def addConvLayer(self, num_of_prev_layer_feature_maps, new_layer_index, num_of_curr_layer_feature_maps, y_dim_size, x_dim_size):
+        for input_feature_map_index in range(num_of_prev_layer_feature_maps):
+            for output_feature_map_index in range(num_of_curr_layer_feature_maps):
+                for y_index in range(y_dim_size):
+                    for x_index in range(x_dim_size):
+                        self.weightsMatrices[new_layer_index][input_feature_map_index][output_feature_map_index][y_index].append(aux_functions.convert_number_to_non_zero_if_needed(getRandomWeight(num_of_curr_layer_feature_maps), self.numbersFormat))
+            self.weightsMatrices[input_feature_map_index][-1].append(aux_functions.convert_number_to_non_zero_if_needed(getRandomWeight(num_of_curr_layer_feature_maps), self.numbersFormat))
+
+    def addFCLayer(self, prev_layer_neurons, new_layer_neurons, new_layer_index):
         for i in range(new_layer_neurons):
-            for j in range(prev_later_neurons):
-                self.weightsMatrices[new_layer_index][i].append(aux_functions.convert_number_to_non_zero_if_needed(getRandomWeight(prev_later_neurons), self.numbersFormat))
+            for j in range(prev_layer_neurons):
+                self.weightsMatrices[new_layer_index][i].append(aux_functions.convert_number_to_non_zero_if_needed(getRandomWeight(prev_layer_neurons), self.numbersFormat))
 
 
     def convert_all_results_to_format(self, layer_index):

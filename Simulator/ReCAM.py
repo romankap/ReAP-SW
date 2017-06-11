@@ -32,7 +32,7 @@ shift_operation_hist_name = 'shift-operation'
 shifted_rows_num_hist_name = 'shifted-rows-num'
 reduce_scalar_from_column_hist_name = 'reduce-scalar'
 reduction_tree_sum = 'reduction-tree-sum'
-is_reduction_tree_pipelined = False
+is_reduction_tree_pipelined = True
 broadcast = 'broadcast'
 
 #--- CPU Instructions Constants ---#

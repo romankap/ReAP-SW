@@ -65,7 +65,7 @@ def SW_test():
 
 def test():
     simulator = Simulator.Simulator()
-    storage=ReCAM.ReCAM(1000)
+    storage=ReCAM.ReCAM(100000)
     print("size in bytes = ", storage.sizeInBytes)
     print("bits per row = ", storage.bitsPerRow)
 

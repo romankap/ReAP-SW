@@ -459,7 +459,7 @@ class ReCAM:
     '''
     ### ------------------------------------------------------------ ###
     # Simple variable-constant arithmetic  - Add / Subtract
-    def getScalarFromColumn(self, col_index, start_row, end_row, operation, numbers_format):
+    def getScalarFromColumn(self, col_index, start_row, end_row, operation, numbers_format=None):
         max_operation_string = "max"
 
         result = 0

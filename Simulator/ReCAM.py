@@ -177,50 +177,6 @@ class ReCAM:
             cycles_executed = 3*elements_num   # 3 cycles per loaded element (Read, match, write)
             self.addCyclesPerInstructionToHistogram(load_data_element_hist_name, self.crossbarColumns[column_index], cycles_executed)
 
-    ### ------------------------------------------------------------ ###
-    # Shift specific column values several rows up or down
-    def shiftColumn(self, col_index, start_row, end_row, numOfRowsToShift=1):
-        # Decide whether to shift up or down
-        if numOfRowsToShift > 0: #Shift down
-            shift_range = range(end_row, start_row-1, -1)
-        else:   #Shift up
-            shift_range = range(start_row, end_row)
-
-        for i in shift_range:
-            self.crossbarArray[i+numOfRowsToShift][col_index] = self.crossbarArray[i][col_index]
-
-        # Zero-fill empty rows
-        # if numOfRowsToShift > 0:  # Shift down
-        #     zero_fill_range = range(start_row, start_row + numOfRowsToShift)
-        # else:  # Shift up
-        #     zero_fill_range = range(start_row + numOfRowsToShift + 1, start_row)
-        #
-        # for j in zero_fill_range:
-        #     self.crossbarArray[j][col] = 0
-
-        ## DEBUG
-        #print("Shifted %i rows in shiftColumn operation", numOfRowsToShift)
-
-        if self.verbose:
-            operation_to_print = "shift column " + str(col_index) + " from row "
-            if numOfRowsToShift > 0:
-                operation_to_print = operation_to_print + str(end_row) + " to row " + str(start_row)
-            else:
-                operation_to_print = operation_to_print + str(start_row) + " to row " + str(end_row)
-
-            self.printArray(operation=operation_to_print)
-
-        # cycle count
-        self.addOperationToInstructionsHistogram(shift_operation_hist_name, bits=self.crossbarColumns[col_index])
-        self.addOperationToInstructionsHistogram(shifted_rows_num_hist_name, bits=self.crossbarColumns[col_index],
-                                                 operations_to_add=abs(numOfRowsToShift)-1)
-        cycles_executed = 3 * self.crossbarColumns[col_index] # 3 cycles per shifted bit
-        self.addCyclesPerInstructionToHistogram(shift_operation_hist_name, self.crossbarColumns[col_index], cycles_executed)
-        # Every additional row to shift, beyond the first, requires 'bit-length' additional cycles
-        self.addCyclesPerInstructionToHistogram(shifted_rows_num_hist_name, self.crossbarColumns[col_index],
-                                                (abs(numOfRowsToShift)-1)*self.crossbarColumns[col_index])
-
-
     #####################################################################
     #####   Shift specific column values several rows up or down
     #####################################################################
@@ -231,9 +187,13 @@ class ReCAM:
             self.crossbarArray[i+distance_to_shift][col_index] = self.crossbarArray[i][col_index]
 
         if self.verbose:
-            operation_to_print = "shift tagged rows in column " + str(col_index) + " direction: " + ("up" if distance_to_shift>1 else "down")
-            self.printArray(operation=operation_to_print)
+            operation_to_print = "shift column " + str(col_index) + " from row "
+            if distance_to_shift > 0:
+                operation_to_print = operation_to_print + tagged_rows_list[-1] + " to row " + tagged_rows_list[0]
+            else:
+                operation_to_print = operation_to_print + tagged_rows_list[0] + " to row " + tagged_rows_list[-1]
 
+            self.printArray(operation=operation_to_print)
         ## DEBUG
         #print("Shifted %d rows in shiftColumnOnTaggedRows operation" % distance_to_shift)
 
@@ -246,6 +206,17 @@ class ReCAM:
         # Every additional row to shift, beyond the first, requires 'bit-length' additional cycles
         self.addCyclesPerInstructionToHistogram(shifted_rows_num_hist_name, self.crossbarColumns[col_index],
                                                 (abs(distance_to_shift)-1)*self.crossbarColumns[col_index])
+
+
+        def shiftColumn(self, col_index, start_row, end_row, distance_to_shift=1):
+            # Decide whether to shift up or down
+            if distance_to_shift > 0:  # Shift down
+                shift_range = range(end_row, start_row - 1, -1)
+            else:  # Shift up
+                shift_range = range(start_row, end_row)
+
+            tagged_rows_list = list(shift_range)
+            self.shiftColumnOnTaggedRows(col_index, tagged_rows_list, distance_to_shift)
 
 
     #####################################################################
@@ -290,49 +261,6 @@ class ReCAM:
     #####################################################################
     ######      Simple arithmetic - Add, Subtract, Max
     #####################################################################
-    def rowWiseOperation(self, colA, colB, res_col, start_row, end_row, operation, number_format=None):
-        if operation == '+':
-            for i in range(start_row,end_row+1):
-                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] + self.crossbarArray[i][colB], number_format)
-
-        elif operation == '-':
-            for i in range(start_row, end_row+1):
-                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] - self.crossbarArray[i][colB], number_format)
-
-        elif operation == '*':
-            for i in range(start_row, end_row + 1):
-                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] * self.crossbarArray[i][colB], number_format)
-
-        elif operation == max_operation_string:
-            for i in range(start_row, end_row + 1):
-                self.crossbarArray[i][res_col] = convert_if_needed(max(self.crossbarArray[i][colA], self.crossbarArray[i][colB]), number_format)
-        else:
-            print("!!! Unknown Operation !!!")
-            return
-
-        if self.verbose:
-            operation_to_print = "rowWiseOperation() with operation = " + operation
-            self.printArray(msg=operation_to_print)
-
-        if operation == '-' or operation == '+':
-            if res_col != colA:
-                cycles_per_bit = 2**3
-            else:
-                cycles_per_bit = 2**2
-        elif operation == max_operation_string:
-            cycles_per_bit = 2
-        elif operation == '*':
-            cycles_per_bit = min(self.crossbarColumns[colA],self.crossbarColumns[colB]) * 2
-
-        instruction_full_name = row_by_row_hist_name + '.' + operation
-        instruction_bits = max(self.crossbarColumns[colA],self.crossbarColumns[colB])
-        self.addOperationToInstructionsHistogram(instruction_full_name, instruction_bits)
-        cycles_executed = cycles_per_bit * instruction_bits
-        self.addCyclesPerInstructionToHistogram(instruction_full_name, instruction_bits, cycles_executed)
-
-
-    ### ------------------------------------------------------------ ###
-    # Simple arithmetic - Add, Subtract, Max
     def taggedRowWiseOperation(self, colA, colB, res_col, tagged_rows_list, operation, number_format=None):
         if operation == '+':
             for i in tagged_rows_list:
@@ -378,6 +306,13 @@ class ReCAM:
         self.addOperationToInstructionsHistogram(instruction_full_name, instruction_bits)
         cycles_executed = cycles_per_bit * instruction_bits
         self.addCyclesPerInstructionToHistogram(instruction_full_name, instruction_bits, cycles_executed)
+
+    ### ----------------------------
+
+    def rowWiseOperation(self, colA, colB, res_col, start_row, end_row, operation, number_format=None):
+        tagged_rows_list = list(range(start_row,end_row+1))
+        self.taggedRowWiseOperation(colA, colB, res_col, tagged_rows_list, operation, number_format)
+
 
     ### ------------------------------------------------------------ ###
     # Vector-scalar arithmetic  - Add / Subtract / MUL / Max
@@ -474,16 +409,14 @@ class ReCAM:
     '''
     ### ------------------------------------------------------------ ###
     # Simple variable-constant arithmetic  - Add / Subtract
-    def getScalarFromColumn(self, col_index, start_row, end_row, operation, numbers_format=None):
-        max_operation_string = "max"
-
+    def getScalarFromColumnOnTaggedRows(self, col_index, tagged_rows_list, operation, numbers_format=None):
         result = 0
         result_row_index = -1
         if operation == '+':
-            for i in range(start_row, end_row+1):
+            for i in tagged_rows_list:
                 result = convert_if_needed(result + self.crossbarArray[i][col_index], numbers_format)
         elif operation == max_operation_string:
-            for i in range(start_row, end_row + 1):
+            for i in tagged_rows_list:
                 if self.crossbarArray[i][col_index] > result:
                     result = self.crossbarArray[i][col_index]
                     result_row_index = i
@@ -498,12 +431,19 @@ class ReCAM:
             cycles_executed = cycles_per_bit * self.crossbarColumns[col_index]
         else:
             cycles_per_bit = 2 ** 2
-            cycles_executed = cycles_per_bit * self.crossbarColumns[col_index] * math.ceil( math.log( len(self.crossbarColumns[col_index])))
+            cycles_executed = cycles_per_bit * self.crossbarColumns[col_index] * math.ceil(
+                math.log(len(self.crossbarColumns[col_index])))
 
         full_instruction_name = reduce_scalar_from_column_hist_name + '.' + operation
         self.addOperationToInstructionsHistogram(full_instruction_name, self.crossbarColumns[col_index])
         self.addCyclesPerInstructionToHistogram(full_instruction_name, self.crossbarColumns[col_index], cycles_executed)
         return result, result_row_index
+
+
+    def getScalarFromColumn(self, col_index, start_row, end_row, operation, numbers_format=None):
+        tagged_rows_list = list(range(start_row, end_row+1))
+        self.getScalarFromColumnOnTaggedRows(col_index, tagged_rows_list, operation, numbers_format)
+
 
     ### ------------------------------------------------------------ ###
     # Pipelined Reduction
@@ -760,9 +700,9 @@ class ReCAM:
         else: #DNA
             return 10
 
-    def SeqMatchOnTaggedRows(self, colA, colB, res_col, tagged_rows_list, seq_type):
+    def SeqMatchOnTaggedRows(self, colA, colB, res_col, tagged_rows_list):
         for curr_row in tagged_rows_list:
-            match_score = self.get_match_score(self.crossbarArray[curr_row][colA], self.crossbarArray[curr_row][colB], seq_type)
+            match_score = self.get_match_score(self.crossbarArray[curr_row][colA], self.crossbarArray[curr_row][colB], self.seq_type)
             self.crossbarArray[curr_row][res_col] = match_score
 
         cycles_executed = self.get_cycles_executed()

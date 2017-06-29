@@ -12,6 +12,7 @@ import math
 import os
 import sys
 import datetime
+import ProteinSequencing.BLOSUM62 as blosum62
 
 lib_path = os.path.abspath(os.path.join('spfpm-1.1'))
 sys.path.append(lib_path)
@@ -22,6 +23,7 @@ import xlsxwriter
 ####        AUX functions & definitions
 ################################################
 max_operation_string = "max"
+copy_operation_string = "copy"
 write_operation_string = "write"
 
 #--- Instructions Names ---#
@@ -76,6 +78,9 @@ class ReCAM:
         self.instructionsHistogram = {}
         self.cyclesPerInstructionsHistogram = {}
         self.histogramScope = ""
+
+        self._tagged_rows_list = None
+        #self.blosum_matrix = blosum62.blosum62()
 
     ### ------------------------------------------------------------ ###
     ### ------ Cycle Counter ------- ###
@@ -138,6 +143,7 @@ class ReCAM:
 
         cycles_executed = self.crossbarColumns[col_index]
         self.advanceCycleCouter(cycles_executed)
+        self._tagged_rows_list = tagged_rows_list
         return tagged_rows_list
 
     def tagRows(self, col_index):
@@ -340,6 +346,10 @@ class ReCAM:
             for i in tagged_rows_list:
                 self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] * self.crossbarArray[i][colB], number_format)
 
+        elif operation == copy_operation_string:
+            for i in tagged_rows_list:
+                self.crossbarArray[i][res_col] = self.crossbarArray[i][colA]
+
         elif operation == max_operation_string:
             for i in tagged_rows_list:
                 self.crossbarArray[i][res_col] = convert_if_needed(max(self.crossbarArray[i][colA], self.crossbarArray[i][colB]), number_format)
@@ -356,6 +366,8 @@ class ReCAM:
                 cycles_per_bit = 2 ** 3
             else:
                 cycles_per_bit = 2 ** 2
+        elif operation == copy_operation_string:
+            cycles_per_bit = 2
         elif operation == max_operation_string:
             cycles_per_bit = 2
         elif operation == '*':
@@ -422,14 +434,17 @@ class ReCAM:
             operation_to_print = "taggedRowWiseOperationWithConstant() with operation = " + operation
             self.printArray(operation=operation_to_print)
 
-        elif operation == max_operation_string:
-            cycles_per_bit = 2
-        elif operation == write_operation_string:
-            cycles_per_bit = 1
+
 
         instruction_full_name = row_by_row_hist_name + '.' + operation
         self.addOperationToInstructionsHistogram(instruction_full_name, self.crossbarColumns[colA])
-        cycles_executed = cycles_per_bit * self.crossbarColumns[colA]
+
+        if operation == max_operation_string:
+            cycles_per_bit = 2
+            cycles_executed = cycles_per_bit * self.crossbarColumns[colA]
+        elif operation == write_operation_string:
+            cycles_executed = 3
+
         self.addCyclesPerInstructionToHistogram(instruction_full_name, self.crossbarColumns[colA], cycles_executed)
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
@@ -716,12 +731,41 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Calculate match score
+    def set_match_matrix(self, seq_type, protein_matrix=None, DNA_match_score=0, DNA_mismatch_score=0):
+        if seq_type == 'protein':
+            self.protein_matrix = protein_matrix
+        else:
+            self.DNA_match_score = DNA_match_score
+            self.DNA_mismatch_score = DNA_mismatch_score
+
     def DNAbpMatch(self, colA, colB, res_col, start_row, end_row, bp_match_score, bp_mismatch_score):
         for curr_row in range(start_row, end_row+1):
             is_bp_match = (self.crossbarArray[curr_row][colA] == self.crossbarArray[curr_row][colB])
             self.crossbarArray[curr_row][res_col] = bp_match_score if is_bp_match else bp_mismatch_score
 
         cycles_executed = 2 + 4*(max(self.crossbarColumns[colA], self.crossbarColumns[colA]))
+        self.advanceCycleCouter(cycles_executed)
+        self.addOperationToInstructionsHistogram("DNA base-pair match")
+
+
+    def get_match_score(self, a, b):
+        if self.seq_type == 'protein':
+            return self.protein_matrix.match_dict[(a,b)]
+        else: #seq type is DNA
+            return self.DNA_match_score if a==b else self.DNA_mismatch_score
+
+    def get_cycles_executed(self):
+        if self.seq_type == 'protein':
+            return 2*self.protein_matrix.match_table_rows - self.protein_matrix.batched_write_saved_cycles
+        else: #DNA
+            return 10
+
+    def SeqMatchOnTaggedRows(self, colA, colB, res_col, tagged_rows_list, seq_type):
+        for curr_row in tagged_rows_list:
+            match_score = self.get_match_score(self.crossbarArray[curr_row][colA], self.crossbarArray[curr_row][colB], seq_type)
+            self.crossbarArray[curr_row][res_col] = match_score
+
+        cycles_executed = self.get_cycles_executed()
         self.advanceCycleCouter(cycles_executed)
         self.addOperationToInstructionsHistogram("DNA base-pair match")
 

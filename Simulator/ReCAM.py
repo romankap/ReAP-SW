@@ -322,26 +322,29 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Vector-scalar arithmetic  - Add / Subtract / MUL / Max
-    def rowWiseOperationWithConstant(self, colA, const_scalar, res_col, start_row, end_row, operation, number_format=None):
+    def taggedRowWiseOperationWithConstant(self, colA, const_scalar, res_col, tagged_rows_list, operation, number_format=None):
         if const_scalar == 0:
             converted_scalar = convert_if_needed(const_scalar, number_format)
         else:
             converted_scalar = convert_to_non_zero_if_needed(const_scalar, number_format)
 
         if operation == '+':
-            for i in range(start_row, end_row+1):
-                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] + converted_scalar, number_format)
+            for row_index in tagged_rows_list:
+                self.crossbarArray[row_index][res_col] = convert_if_needed(self.crossbarArray[row_index][colA] + converted_scalar, number_format)
         elif operation == '-':
-            for i in range(start_row, end_row+1):
-                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] - converted_scalar, number_format)
+            for row_index in tagged_rows_list:
+                self.crossbarArray[row_index][res_col] = convert_if_needed(self.crossbarArray[row_index][colA] - converted_scalar, number_format)
         elif operation == '*':
-            for i in range(start_row, end_row + 1):
-                self.crossbarArray[i][res_col] = convert_if_needed(self.crossbarArray[i][colA] * converted_scalar, number_format)
+            for row_index in tagged_rows_list:
+                self.crossbarArray[row_index][res_col] = convert_if_needed(self.crossbarArray[row_index][colA] * converted_scalar, number_format)
         elif operation == max_operation_string:
-            for i in range(start_row, end_row + 1):
-                self.crossbarArray[i][res_col] = convert_if_needed(max(self.crossbarArray[i][colA], converted_scalar), number_format)
+            for row_index in tagged_rows_list:
+                self.crossbarArray[row_index][res_col] = convert_if_needed(max(self.crossbarArray[row_index][colA], converted_scalar), number_format)
+        elif operation == write_operation_string:
+            for row_index in tagged_rows_list:
+                self.crossbarArray[row_index][res_col] = converted_scalar
         else:
-            print("!!! Unknown Operation in rowWiseOperationWithConstant: " + operation + " !!!")
+            print("!!! Unknown Operation in taggedRowWiseOperationWithConstant: " + operation + " !!!")
             exit()
 
         if self.verbose:
@@ -352,41 +355,20 @@ class ReCAM:
         elif operation == '*':
             cycles_per_bit = self.crossbarColumns[colA] * 2
         else:
-            cycles_per_bit = 2 ** 2
+            cycles_per_bit = 2 ** 3
 
         instruction_full_name = row_by_const_hist_name + '.' + operation
-        self.addOperationToInstructionsHistogram(instruction_full_name, self.crossbarColumns[colA])
-        cycles_executed = cycles_per_bit * self.crossbarColumns[colA]
-        self.addCyclesPerInstructionToHistogram(instruction_full_name, self.crossbarColumns[colA], cycles_executed)
+        instruction_bits = self.crossbarColumns[colA] if not write_operation_string else self.crossbarColumns[res_col]
+        self.addOperationToInstructionsHistogram(instruction_full_name, instruction_bits)
+        cycles_executed = cycles_per_bit * instruction_bits
+        self.addCyclesPerInstructionToHistogram(instruction_full_name, instruction_bits, cycles_executed)
 
     ### ------------------------------------------------------------ ###
     # Vector-scalar arithmetic  - Add / Subtract / MUL / Max
-    def taggedRowWiseOperationWithConstant(self, colA, const_scalar, res_col, tagged_rows_list, operation, number_format=None):
-        converted_const_scalar = convert_if_needed(const_scalar, number_format)
+    def rowWiseOperationWithConstant(self, colA, const_scalar, res_col, start_row, end_row, operation, number_format=None):
+        tagged_rows_list = list(range(start_row, end_row + 1))
+        self.rowWiseOperationWithConstant(colA, const_scalar, res_col, tagged_rows_list, operation, number_format)
 
-        if operation == write_operation_string:
-            for row_index in tagged_rows_list:
-                self.crossbarArray[row_index][res_col] = converted_const_scalar
-        else:
-            print("!!! Unknown Operation !!!")
-            return
-
-        if self.verbose:
-            operation_to_print = "taggedRowWiseOperationWithConstant() with operation = " + operation
-            self.printArray(operation=operation_to_print)
-
-
-        instruction_full_name = row_by_row_hist_name + '.' + operation
-        instruction_bits = self.crossbarColumns[colA] if colA else self.crossbarColumns[res_col]
-        self.addOperationToInstructionsHistogram(instruction_full_name, instruction_bits)
-
-        if operation == max_operation_string:
-            cycles_per_bit = 2
-            cycles_executed = cycles_per_bit * self.crossbarColumns[colA]
-        elif operation == write_operation_string:
-            cycles_executed = 3
-
-        self.addCyclesPerInstructionToHistogram(instruction_full_name, instruction_bits, cycles_executed)
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
     '''def MULConsecutiveRows(self, start_row, end_row, colRes, colA, colB, number_format=None):

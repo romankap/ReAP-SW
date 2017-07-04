@@ -208,15 +208,15 @@ class ReCAM:
                                                 (abs(distance_to_shift)-1)*self.crossbarColumns[col_index])
 
 
-        def shiftColumn(self, col_index, start_row, end_row, distance_to_shift=1):
-            # Decide whether to shift up or down
-            if distance_to_shift > 0:  # Shift down
-                shift_range = range(end_row, start_row - 1, -1)
-            else:  # Shift up
-                shift_range = range(start_row, end_row)
+    def shiftColumn(self, col_index, start_row, end_row, distance_to_shift=1):
+        # Decide whether to shift up or down
+        if distance_to_shift > 0:  # Shift down
+            shift_range = range(end_row, start_row - 1, -1)
+        else:  # Shift up
+            shift_range = range(start_row, end_row)
 
-            tagged_rows_list = list(shift_range)
-            self.shiftColumnOnTaggedRows(col_index, tagged_rows_list, distance_to_shift)
+        tagged_rows_list = list(shift_range)
+        self.shiftColumnOnTaggedRows(col_index, tagged_rows_list, distance_to_shift)
 
 
     #####################################################################
@@ -442,7 +442,7 @@ class ReCAM:
 
     def getScalarFromColumn(self, col_index, start_row, end_row, operation, numbers_format=None):
         tagged_rows_list = list(range(start_row, end_row+1))
-        self.getScalarFromColumnOnTaggedRows(col_index, tagged_rows_list, operation, numbers_format)
+        return self.getScalarFromColumnOnTaggedRows(col_index, tagged_rows_list, operation, numbers_format)
 
 
     ### ------------------------------------------------------------ ###

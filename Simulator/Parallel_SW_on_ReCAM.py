@@ -123,10 +123,17 @@ def Parallel_SW_on_ReCAM(DB_sequences, query_seq):
         storage.taggedRowWiseOperation(left_AD, temp_col_index, F_col_index, tagged_rows_list, "max")
         storage.taggedRowWiseOperation(right_AD, F_col_index, right_AD, tagged_rows_list, "max")
 
-        storage.shiftColumn(E_col_index, start_row - 1, end_row - 1, 1)
+        # Shifting active-bit one row up to shift row values down. Later the bit will be shifted back down
+        storage.shiftColumnOnTaggedRows(active_bit_col, tagged_rows_list, -1)
+        tagged_rows_list = storage.tagRowsEqualToConstant(active_bit_col, 1, alg_start_row, alg_end_row)
+        storage.shiftColumnOnTaggedRows(E_col_index, tagged_rows_list, 1)
+        storage.shiftColumnOnTaggedRows(left_AD, tagged_rows_list, 1)
+
+        # Shifting active-bit one row down.
+        storage.shiftColumnOnTaggedRows(active_bit_col, tagged_rows_list, 1)
+        tagged_rows_list = storage.tagRowsEqualToConstant(active_bit_col, 1, alg_start_row, alg_end_row)
         storage.taggedRowWiseOperationWithConstant(E_col_index, DNA_gap_extend, E_col_index, tagged_rows_list, '+')
-        storage.shiftColumn(left_AD, start_row-1, end_row-1, 1)
-        storage.rowWiseOperation(left_AD, E_col_index, E_col_index, start_row+1, end_row, "max")
+        storage.taggedRowWiseOperation(left_AD, E_col_index, E_col_index, tagged_rows_list, "max")
 
         storage.taggedRowWiseOperation(right_AD, E_col_index, right_AD, tagged_rows_list, "max")
         storage.taggedRowWiseOperation(right_AD, max_AD_scores_col_index, right_AD, tagged_rows_list, "max")

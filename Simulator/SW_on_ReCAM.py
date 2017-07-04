@@ -24,7 +24,7 @@ def getOperatingRows(iteration, offset, lenA, lenB):
     return start_row+offset, end_row+offset
 
 def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
-    storage = ReCAM.ReCAM(32768)
+    storage = ReCAM.ReCAM(32768*10)
     verbose_prints = False
     if verbose_prints:
         print("size in bytes = ", storage.sizeInBytes)
@@ -79,9 +79,10 @@ def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
         storage.rowWiseOperation(right_AD, F_col_index, right_AD, start_row, end_row, "max")
 
         storage.shiftColumn(E_col_index, start_row-1, end_row-1, 1)
+        storage.shiftColumn(left_AD, start_row - 1, end_row - 1, 1)
         storage.rowWiseOperationWithConstant(E_col_index, DNA_gap_extend, E_col_index, start_row, end_row, '+')
-        storage.shiftColumn(left_AD, start_row-1, end_row-1, 1)
-        storage.rowWiseOperation(left_AD, E_col_index, E_col_index, start_row+1, end_row, "max")
+        #DEBUG: commented for test. Return uncomment in case of errors. storage.rowWiseOperation(left_AD, E_col_index, E_col_index, start_row+1, end_row, "max")
+        storage.rowWiseOperation(left_AD, E_col_index, E_col_index, start_row, end_row, "max") #DEBUG: Remove in case of errors
 
         storage.rowWiseOperation(right_AD, E_col_index, right_AD, start_row, end_row, "max")
 
@@ -98,10 +99,10 @@ def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
         # print("\n")
         #storage.printArray(header=table_header_row, tablefmt="grid")
 
-    print("=== ReCAM Cycles executed: ", storage.getCyclesCounter())
-    print("* SeqA length = ", len(seqA), " seqB length = ", len(seqB))
-    print("** Cycles: ", storage.getCyclesCounter())
-    print("*** Performance (CUPs): ", len(seqA)*len(seqB) * storage.getFrequency()//storage.getCyclesCounter())
+    #print("=== ReCAM Cycles executed: ", storage.getCyclesCounter())
+    #print("* SeqA length = ", len(seqA), " seqB length = ", len(seqB))
+    #print("** Cycles: ", storage.getCyclesCounter())
+    #print("*** Performance (CUPs): ", len(seqA)*len(seqB) * storage.getFrequency()//storage.getCyclesCounter())
     return (total_max_score, total_max_row_index, total_max_col_index)
 
 #SW_on_ReCAM()

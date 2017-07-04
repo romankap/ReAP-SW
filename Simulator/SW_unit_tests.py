@@ -11,7 +11,7 @@ import swalign'''
 
 
 def compare_SW_max_score(serial_result, ReCAM_result):
-    if serial_result != ReCAM_result:
+    if serial_result[0] != ReCAM_result[0]:
         return False
     return True
 
@@ -36,10 +36,10 @@ def get_random_sequence(len):
 
 
 def generate_random_sequences():
-    seqA_len = random.randint(10,128)
+    seqA_len = random.randint(100,5000)
     seqA = get_random_sequence(seqA_len)
 
-    seqB_len = random.randint(10,seqA_len)
+    seqB_len = random.randint(100,seqA_len)
     seqB = get_random_sequence(seqB_len)
 
     return (seqA, seqB)
@@ -48,7 +48,7 @@ def generate_random_sequences():
 def SW_test():
     random.seed()
     # choose your own values here… 2 and -1 are common.
-    for i in range (0,100):
+    for i in range(0,50):
         (seqA, seqB) = generate_random_sequences()
 
         serial_result = Serial_SmithWaterman.main(input_seqA=seqA, input_seqB=seqB)
@@ -61,6 +61,8 @@ def SW_test():
             print("ReCAM result: ", ReCAM_result)
             print("(seqA, seqB): ", seqA, ", ", seqB)
             print("!!!!!!!!!!!!!!!!")
+        else:
+            print("VVV CPU and ReCAM scores match VVV")
 
 
 def test():

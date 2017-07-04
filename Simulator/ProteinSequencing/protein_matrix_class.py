@@ -1,5 +1,5 @@
 import os,sys
-import BLOSUM62
+import ProteinSequencing.BLOSUM62 as BLOSUM62
 import operator
 
 
@@ -49,4 +49,4 @@ def analyze_protein_matrix(protein_matrix):
     print("Number of different scores", len(score_dict))
     print("Saved ReCAM Cycles", saved_ReCAM_cycles)
 
-analyze_BLOSUM62()
+#analyze_BLOSUM62()

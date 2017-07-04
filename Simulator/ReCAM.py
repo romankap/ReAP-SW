@@ -295,16 +295,22 @@ class ReCAM:
             else:
                 cycles_per_bit = 2 ** 2
         elif operation == copy_operation_string:
-            cycles_per_bit = 2
+            cycles_per_bit = 0
         elif operation == max_operation_string:
             cycles_per_bit = 2
         elif operation == '*':
             cycles_per_bit = min(self.crossbarColumns[colA], self.crossbarColumns[colB]) * 16
 
         instruction_full_name = row_by_row_hist_name + '.' + operation
-        instruction_bits = max(self.crossbarColumns[colA], self.crossbarColumns[colB])
+        if not colB:
+            instruction_bits = self.crossbarColumns[colA]
+        else:
+            instruction_bits = max(self.crossbarColumns[colA], self.crossbarColumns[colB])
         self.addOperationToInstructionsHistogram(instruction_full_name, instruction_bits)
-        cycles_executed = cycles_per_bit * instruction_bits
+        if operation != copy_operation_string:
+            cycles_executed = cycles_per_bit * instruction_bits
+        else:
+            cycles_executed = 2
         self.addCyclesPerInstructionToHistogram(instruction_full_name, instruction_bits, cycles_executed)
 
     ### ----------------------------
@@ -370,9 +376,9 @@ class ReCAM:
             self.printArray(operation=operation_to_print)
 
 
-
         instruction_full_name = row_by_row_hist_name + '.' + operation
-        self.addOperationToInstructionsHistogram(instruction_full_name, self.crossbarColumns[colA])
+        instruction_bits = self.crossbarColumns[colA] if colA else self.crossbarColumns[res_col]
+        self.addOperationToInstructionsHistogram(instruction_full_name, instruction_bits)
 
         if operation == max_operation_string:
             cycles_per_bit = 2
@@ -380,7 +386,7 @@ class ReCAM:
         elif operation == write_operation_string:
             cycles_executed = 3
 
-        self.addCyclesPerInstructionToHistogram(instruction_full_name, self.crossbarColumns[colA], cycles_executed)
+        self.addCyclesPerInstructionToHistogram(instruction_full_name, instruction_bits, cycles_executed)
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication
     '''def MULConsecutiveRows(self, start_row, end_row, colRes, colA, colB, number_format=None):
@@ -672,6 +678,7 @@ class ReCAM:
     ### ------------------------------------------------------------ ###
     # Calculate match score
     def set_match_matrix(self, seq_type, protein_matrix=None, DNA_match_score=0, DNA_mismatch_score=0):
+        self.seq_type = seq_type
         if seq_type == 'protein':
             self.protein_matrix = protein_matrix
         else:
@@ -702,7 +709,7 @@ class ReCAM:
 
     def SeqMatchOnTaggedRows(self, colA, colB, res_col, tagged_rows_list):
         for curr_row in tagged_rows_list:
-            match_score = self.get_match_score(self.crossbarArray[curr_row][colA], self.crossbarArray[curr_row][colB], self.seq_type)
+            match_score = self.get_match_score(self.crossbarArray[curr_row][colA], self.crossbarArray[curr_row][colB])
             self.crossbarArray[curr_row][res_col] = match_score
 
         cycles_executed = self.get_cycles_executed()

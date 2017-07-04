@@ -70,13 +70,13 @@ def Parallel_SW_on_ReCAM(DB_sequences, query_seq):
     for i in range(6):
         storage.loadData(zero_vector, 0, 32)  # load scores columns
 
-    copy_start_row = 0; max_seq_len=0
+    copy_start_row = 0; max_DB_seq_len=0
     for seq in DB_sequences:
         seq_as_list = list(seq)
         place_DB_seq_in_ReCAM(storage, copy_start_row, first_row_col, last_row_col, DB_seq_col, amino_acid_bits, seq_as_list)
         copy_start_row += len(seq)
-        if max_seq_len < len(seq_as_list):
-            max_seq_len = len(seq_as_list)
+        if max_DB_seq_len < len(seq_as_list):
+            max_DB_seq_len = len(seq_as_list)
 
     alg_end_row = copy_start_row
     alg_start_row = 0
@@ -89,9 +89,9 @@ def Parallel_SW_on_ReCAM(DB_sequences, query_seq):
     # 2) Copy first query_seq character
 
     protein_matrix = Protein_Matrix_Class.blosum_matrix(BLOSUM62.full_blosum62())
-    ReCAM.set_match_matrix('protein', protein_matrix)
+    storage.set_match_matrix('protein', protein_matrix)
     #for i in range (0, len(seqA)+len(seqB)+2):
-    for i in range(0, max_seq_len + query_seq_len - 1):
+    for i in range(0, max_DB_seq_len + query_seq_len - 1):
         # Alg iteration outline:
         # 1) Shift query seq down on all active rows
         # 2) shift down active rows bit
@@ -140,17 +140,17 @@ def Parallel_SW_on_ReCAM(DB_sequences, query_seq):
 
 
     print("=== ReCAM Cycles executed: ", storage.getCyclesCounter())
-    print("* SeqA length = ", len(seqA), " seqB length = ", len(seqB))
-    print("** Cycles: ", storage.getCyclesCounter())
-    print("*** Performance (CUPs): ", len(seqA)*len(seqB) * storage.getFrequency()//storage.getCyclesCounter())
+    print("* Query seq length = ", query_seq_len, ". Max DB seq length = ", max_DB_seq_len)
+    #print("** Cycles: ", storage.getCyclesCounter())
+    #print("*** Performance (CUPs): ", len(seqA)*len(seqB) * storage.getFrequency()//storage.getCyclesCounter())
     return (total_max_score, total_max_row_index, total_max_col_index)
 
 ###################################################################
 
 def test_Parallel_SW_on_ReCAM():
-    seq_list = []
-    seq_list.append("AGTTTC")
-    seq_list.append("ACCG")
-    Parallel_SW_on_ReCAM(seq_list, "TGCC")
+    DB_seq_list = []
+    DB_seq_list.append("AGTTTC")
+    DB_seq_list.append("ACCG")
+    Parallel_SW_on_ReCAM(DB_seq_list, "TGCC")
 
 test_Parallel_SW_on_ReCAM()

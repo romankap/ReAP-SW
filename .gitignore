@@ -230,3 +230,7 @@ Simulator/.idea/*
 */__pycache__/*
 *.iml
 *.xml
+Simulator/.idea/misc.xml
+Simulator/.idea/workspace.xml
+Simulator/__pycache__/ReCAM.cpython-35.pyc
+Simulator/ProteinSequencing/protein_matrix_class.py

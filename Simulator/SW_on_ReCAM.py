@@ -23,16 +23,16 @@ def getOperatingRows(iteration, offset, lenA, lenB):
 
     return start_row+offset, end_row+offset
 
-def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
-    storage = ReCAM.ReCAM(32768*10)
+def SW_on_ReCAM(input_seqA="AGTTTC", input_seqB="TGCC"):
+    seqA = list(input_seqA)
+    seqB = list(input_seqB)
+    zero_vector = [0] * (len(seqA) + len(seqB) + 1)
+
+    storage = ReCAM.ReCAM((len(seqA) + len(seqB))*2*32)
     verbose_prints = False
     if verbose_prints:
         print("size in bytes = ", storage.sizeInBytes)
         print("bits per row = ", storage.bitsPerRow)
-
-    seqA = list(input_seqA)
-    seqB = list(input_seqB)
-    zero_vector = [0]*(len(seqA)+len(seqB)+1)
 
     # Pushing seqB above seqA and in an adjacent column
     # In every iteration, seqB will be pushed down and the appropriate rows will be compared
@@ -71,7 +71,9 @@ def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
 
         storage.DNAbpMatch(seqA_col_index, seqB_col_index, temp_col_index, start_row, end_row, DNA_match_score, DNA_mismatch_score)
         storage.rowWiseOperation(left_AD, temp_col_index, right_AD, start_row, end_row, '+')
-        storage.rowWiseOperationWithConstant(right_AD, 0, right_AD, start_row, end_row, "max")
+
+        # AD[left_AD] is not needed anymore. Will be used as temp
+        storage.rowWiseOperationWithConstant(right_AD, 0, right_AD, start_row, end_row, "max") # Compare result with 0
 
         storage.rowWiseOperationWithConstant(middle_AD, DNA_gap_first, left_AD, start_row, end_row, '+')
         storage.rowWiseOperationWithConstant(F_col_index, DNA_gap_extend, temp_col_index, start_row, end_row, '+')
@@ -105,4 +107,4 @@ def SW_on_ReCAM(input_seqA="AGCT", input_seqB="GCT"):
     #print("*** Performance (CUPs): ", len(seqA)*len(seqB) * storage.getFrequency()//storage.getCyclesCounter())
     return (total_max_score, total_max_row_index, total_max_col_index)
 
-#SW_on_ReCAM()
+SW_on_ReCAM()

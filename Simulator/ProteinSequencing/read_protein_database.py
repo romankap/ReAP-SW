@@ -39,4 +39,4 @@ def get_protein_database_stats():
     print("Total amino acids in database: ", total_amino_acids)
     print("Total number of protein sequences in database: ", total_num_of_sequences)
 
-get_protein_database_stats()
+#get_protein_database_stats()

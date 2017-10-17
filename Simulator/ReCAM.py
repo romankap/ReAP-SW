@@ -135,8 +135,9 @@ class ReCAM:
 
     ### ------------------------------------------------------------ ###
     # Set the width of each column
-    def tagRowsEqualToConstant(self, col_index, const, start_row, end_row):
-        tagged_rows_list = []
+    def tagRowsEqualToConstant(self, col_index, const, start_row, end_row, tagged_rows_list=None):
+        if tagged_rows_list==None:
+            tagged_rows_list = []
         for row_index in range(start_row, end_row+1):
             if self.crossbarArray[row_index][col_index] == const:
                 tagged_rows_list.append(row_index)
@@ -146,9 +147,23 @@ class ReCAM:
         self._tagged_rows_list = tagged_rows_list
         return tagged_rows_list
 
+    def untagRowsNotEqualToConstant(self, col_index, const, tagged_rows_list):
+        iteration_num = 0
+        for row_index in tagged_rows_list:
+            if self.crossbarArray[row_index][col_index] != const:
+                tagged_rows_list.pop(iteration_num)
+            iteration_num += 1
+
+        cycles_executed = self.crossbarColumns[col_index]
+        self.advanceCycleCouter(cycles_executed)
+        self._tagged_rows_list = tagged_rows_list
+        return tagged_rows_list
+
+
     def tagRows(self, col_index):
         cycles_executed = 3
         self.advanceCycleCouter(cycles_executed)
+
 
     ### ------------------------------------------------------------ ###
     def loadData(self, column_data, start_row, column_width, column_index=-1, count_as_operation = True):
@@ -183,7 +198,7 @@ class ReCAM:
     def shiftColumnOnTaggedRows(self, col_index, tagged_rows_list, distance_to_shift=1):
         # directions_of_shift determines whether to shift up or down
 
-        for i in tagged_rows_list:
+        for i in reversed(tagged_rows_list):
             self.crossbarArray[i+distance_to_shift][col_index] = self.crossbarArray[i][col_index]
 
         if self.verbose:
@@ -210,10 +225,10 @@ class ReCAM:
 
     def shiftColumn(self, col_index, start_row, end_row, distance_to_shift=1):
         # Decide whether to shift up or down
-        if distance_to_shift > 0:  # Shift down
-            shift_range = range(end_row, start_row - 1, -1)
+        if distance_to_shift < 0:  # Shift down
+            shift_range = range(end_row, start_row+1, -1)
         else:  # Shift up
-            shift_range = range(start_row, end_row)
+            shift_range = range(start_row, end_row+1)
 
         tagged_rows_list = list(shift_range)
         self.shiftColumnOnTaggedRows(col_index, tagged_rows_list, distance_to_shift)
@@ -367,7 +382,7 @@ class ReCAM:
     # Vector-scalar arithmetic  - Add / Subtract / MUL / Max
     def rowWiseOperationWithConstant(self, colA, const_scalar, res_col, start_row, end_row, operation, number_format=None):
         tagged_rows_list = list(range(start_row, end_row + 1))
-        self.rowWiseOperationWithConstant(colA, const_scalar, res_col, tagged_rows_list, operation, number_format)
+        self.taggedRowWiseOperationWithConstant(colA, const_scalar, res_col, tagged_rows_list, operation, number_format)
 
     ### ------------------------------------------------------------ ###
     # Fixed-point multiplication

@@ -50,13 +50,15 @@ def place_DB_seq_in_ReCAM(storage, start_row, first_row_col, buffer_row_col, shi
     storage.loadData(seq_as_list, start_row+1, DB_seq_column_bits, seq_col)
 
 
-def Multi_SW_on_ReCAM(DB_sequences, query_seq):
+def Multi_SW_on_ReCAM(DB_sequences, query_seq, sequence_type='DNA'):
     storage = ReCAM.ReCAM(256*len(DB_sequences)* len(max(DB_sequences, key=len)))
-    SEQUENCE_TYPE = 'DNA'
-    if SEQUENCE_TYPE == 'protein':
+
+    storage.seq_type = sequence_type
+    if sequence_type == 'protein':
         bits_per_sequence_char = amino_acid_bits
     else:
         bits_per_sequence_char = DNA_bp_bits
+
 
     verbose_prints = False
     if verbose_prints:
@@ -112,7 +114,7 @@ def Multi_SW_on_ReCAM(DB_sequences, query_seq):
     # 2) Copy first query_seq character
 
     protein_matrix = Protein_Matrix_Class.blosum_matrix(BLOSUM62.full_blosum62())
-    storage.set_match_matrix('DNA', protein_matrix, DNA_match_score, DNA_mismatch_score)
+    storage.set_match_matrix(sequence_type, protein_matrix, DNA_match_score, DNA_mismatch_score)
     #for i in range (0, len(seqA)+len(seqB)+2):
     for i in range(0, max_DB_seq_len + query_seq_len - 1):
         # Alg iteration outline:
@@ -240,7 +242,7 @@ def test_Multi_SW_on_ReCAM():
     DB_seq_list.append("AGTTTC")
 
     query_seq = "TGCC"
-    max_scores = Multi_SW_on_ReCAM(DB_seq_list, query_seq)
+    max_scores = Multi_SW_on_ReCAM(DB_seq_list, query_seq, 'protein')
     print("Mutli-SW Scores:", max_scores)
 
     serial_execution_scores = []
@@ -249,4 +251,4 @@ def test_Multi_SW_on_ReCAM():
 
     print("Serial results:", serial_execution_scores)
 
-#test_Multi_SW_on_ReCAM()
+test_Multi_SW_on_ReCAM()

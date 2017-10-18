@@ -707,24 +707,18 @@ class ReCAM:
     def get_match_score(self, a, b):
         cycles_executed = 0
         if self.seq_type == 'protein':
-            return self.protein_matrix.match_dict[(a,b)]
-            cycles_executed = 23 * 23 * 2
-            match_name = protein_match_hist_name
-            bits_per_char = 5
+            if (a, b) in self.protein_matrix.match_dict:
+                return self.protein_matrix.match_dict[(a,b)]
+            else:
+                return 0
+
         else: #seq type is DNA
             return self.DNA_match_score if a==b else self.DNA_mismatch_score
-            cycles_executed = 10
-            match_name = DNA_BP_match_hist_name
-            bits_per_char = 5
-
-        self.addCyclesPerInstructionToHistogram(match_name, bits_per_char, cycles_executed)
-        self.addOperationToInstructionsHistogram(match_name, bits_per_char)
 
 
-
-    def get_cycles_executed(self):
+    def get_match_cycles_executed(self):
         if self.seq_type == 'protein':
-            return 2*self.protein_matrix.match_table_rows - self.protein_matrix.batched_write_saved_cycles
+            return 2*23*23
         else: #DNA
             return 10
 
@@ -733,9 +727,18 @@ class ReCAM:
             match_score = self.get_match_score(self.crossbarArray[curr_row][colA], self.crossbarArray[curr_row][colB])
             self.crossbarArray[curr_row][res_col] = match_score
 
-        cycles_executed = self.get_cycles_executed()
+        if self.seq_type == 'protein':
+            cycles_executed = 2*23*23
+            match_name = protein_match_hist_name
+            bits_per_char = 5
+        else: #DNA
+            cycles_executed = 2 + 4*2
+            match_name = DNA_BP_match_hist_name
+            bits_per_char = 2
+
         self.advanceCycleCouter(cycles_executed)
-        self.addOperationToInstructionsHistogram("DNA base-pair match")
+        self.addCyclesPerInstructionToHistogram(match_name, bits_per_char, cycles_executed)
+        self.addOperationToInstructionsHistogram(match_name, bits_per_char)
 
     '''
     You have only 4 equal combinations (0/0, 1/1, 2/2 and 3/3). The rest are mismatch.

@@ -693,6 +693,14 @@ class ReCAM:
         self.advanceCycleCouter(cycles_executed)
         self.addOperationToInstructionsHistogram("DNA base-pair match")
 
+    def find_max_scalar_in_rows_range(self, column_index, start_row, end_row):
+        max_scalar = -math.inf
+        for row_index in range(start_row, end_row+1):
+            if max_scalar < self.crossbarArray[row_index][column_index]:
+                max_scalar = self.crossbarArray[row_index][column_index]
+
+        return max_scalar
+
 
     def get_match_score(self, a, b):
         if self.seq_type == 'protein':

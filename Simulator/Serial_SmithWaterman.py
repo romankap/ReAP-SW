@@ -44,11 +44,11 @@ def main(input_seqA="CCCCCC", input_seqB="AAAAAA"):
     cols = len(seq2) + 1
 
     # Initialize the scoring matrix.
-    score_matrix, start_pos = create_score_matrix(rows, cols)
+    score_matrix, max_pos = create_score_matrix(rows, cols)
     #print_matrix(score_matrix, start_pos)
     #print_antidiagonals(score_matrix)
 
-    return (score_matrix[start_pos[0]][start_pos[1]], start_pos[0], start_pos[1])
+    return (score_matrix[max_pos[0]][max_pos[1]], max_pos[0], max_pos[1])
 
     # Traceback. Find the optimal path through the scoring matrix. This path
     # corresponds to the optimal local sequence alignment.

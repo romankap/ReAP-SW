@@ -211,13 +211,7 @@ def Multi_SW_on_ReCAM(DB_sequences, query_seq):
         # update max scores in max_AD_scores_col
         storage.taggedRowWiseOperation(right_AD, max_AD_scores_col_index, max_AD_scores_col_index, tagged_rows_list, "max")
 
-        #find Max scores
-        seq_start, seq_end = 0, 0; max_scores=[]
-        for seq_len in DB_seq_lengths:
-            seq_start = seq_end+1
-            seq_end = seq_start+seq_len
-            (max_score_in_column, row_of_max_score_in_column) = storage.getScalarFromColumn(right_AD, seq_start, seq_end, "max")
-            max_scores.append((max_score_in_column, row_of_max_score_in_column))
+    max_scores = get_max_scores_from_DB_alignment(storage, DB_sequences, max_AD_scores_col_index)
 
     print("=== ReCAM Cycles executed: ", storage.getCyclesCounter())
     print("* Query seq length = ", query_seq_len, ". Max DB seq length = ", max_DB_seq_len)
@@ -227,6 +221,18 @@ def Multi_SW_on_ReCAM(DB_sequences, query_seq):
 
 ###################################################################
 
+def get_max_scores_from_DB_alignment(storage, DB_seq_list, column_index):
+    # find Max scores
+    seq_start, seq_end = 0, 0
+    max_scores = []
+    for DB_seq in DB_seq_list:
+        seq_start = seq_end + 1
+        seq_end = seq_start + len(DB_seq)
+        max_scalar = storage.find_max_scalar_in_rows_range(column_index, seq_start, seq_end)
+        max_scores.append(max_scalar)
+
+    return max_scores
+
 def test_Multi_SW_on_ReCAM():
     DB_seq_list = []
     DB_seq_list.append("ACCG")
@@ -234,16 +240,13 @@ def test_Multi_SW_on_ReCAM():
     DB_seq_list.append("AGTTTC")
 
     query_seq = "TGCC"
-    scores = Multi_SW_on_ReCAM(DB_seq_list, query_seq)
-    print(scores)
+    max_scores = Multi_SW_on_ReCAM(DB_seq_list, query_seq)
+    print("Mutli-SW Scores:", max_scores)
 
-    # Serial algorithm
-    print("Serial result X: (total_max_score, total_max_row_index, total_max_col_index)")
+    serial_execution_scores = []
+    for DB_seq in DB_seq_list:
+        serial_execution_scores.append(Serial_SmithWaterman.main(input_seqA=DB_seq, input_seqB=query_seq)[0])
 
-    serial_result = Serial_SmithWaterman.main(input_seqA=DB_seq_list[0], input_seqB=query_seq)
-    print("Serial result 1:", serial_result)
-
-    serial_result = Serial_SmithWaterman.main(input_seqA=DB_seq_list[1], input_seqB=query_seq)
-    print("Serial result 2:", serial_result)
+    print("Serial results:", serial_execution_scores)
 
 test_Multi_SW_on_ReCAM()

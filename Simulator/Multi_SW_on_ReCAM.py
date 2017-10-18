@@ -164,10 +164,6 @@ def Multi_SW_on_ReCAM(DB_sequences, query_seq):
         storage.taggedRowWiseOperation(left_AD, temp_col_index, F_col_index, tagged_rows_list, "max")
         storage.taggedRowWiseOperation(right_AD, F_col_index, right_AD, tagged_rows_list, "max")
 
-        # Shifting active-bit one row up to shift row values down. Later the bit will be shifted back down
-        # TODO: Solve the shift-up algorithmically. Two options:
-        #           (1) Previous iteration will be use for the next iteration
-        #[preferred](2) Add a 'left_AD_and_E_shift_bit' which will mark the required rows for E and left_AD
         #storage.shiftColumnOnTaggedRows(active_bit_col, tagged_rows_list, -1)
         tagged_rows_list = storage.tagRowsEqualToConstant(shift_E_left_AD_col, 1, alg_start_row, alg_end_row)
         #tagged_rows_list = storage.untagRowsNotEqualToConstant(last_row_col, 1, tagged_rows_list)

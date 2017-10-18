@@ -36,6 +36,8 @@ reduce_scalar_from_column_hist_name = 'reduce-scalar'
 reduction_tree_sum = 'reduction-tree-sum'
 is_reduction_tree_pipelined = True
 broadcast = 'broadcast'
+DNA_BP_match_hist_name = 'DNA-BP-match'
+protein_match_hist_name = 'protein_match_hist_name'
 
 #--- CPU Instructions Constants ---#
 CPU_softmax_cycles = 100
@@ -156,8 +158,6 @@ class ReCAM:
                 tagged_rows_list.pop(iteration_num)
             iteration_num += 1
 
-        cycles_executed = self.crossbarColumns[col_index]
-        self.advanceCycleCouter(cycles_executed)
         self._tagged_rows_list = tagged_rows_list
         return tagged_rows_list
 
@@ -690,8 +690,10 @@ class ReCAM:
             self.crossbarArray[curr_row][res_col] = bp_match_score if is_bp_match else bp_mismatch_score
 
         cycles_executed = 2 + 4*(max(self.crossbarColumns[colA], self.crossbarColumns[colA]))
-        self.advanceCycleCouter(cycles_executed)
-        self.addOperationToInstructionsHistogram("DNA base-pair match")
+        #self.advanceCycleCouter(cycles_executed)
+        self.addCyclesPerInstructionToHistogram(DNA_BP_match_hist_name, max(self.crossbarColumns[colA], self.crossbarColumns[colA]),
+                                                cycles_executed)
+        self.addOperationToInstructionsHistogram(DNA_BP_match_hist_name, max(self.crossbarColumns[colA], self.crossbarColumns[colA]))
 
     def find_max_scalar_in_rows_range(self, column_index, start_row, end_row):
         max_scalar = -math.inf
@@ -703,10 +705,22 @@ class ReCAM:
 
 
     def get_match_score(self, a, b):
+        cycles_executed = 0
         if self.seq_type == 'protein':
             return self.protein_matrix.match_dict[(a,b)]
+            cycles_executed = 23 * 23 * 2
+            match_name = protein_match_hist_name
+            bits_per_char = 5
         else: #seq type is DNA
             return self.DNA_match_score if a==b else self.DNA_mismatch_score
+            cycles_executed = 10
+            match_name = DNA_BP_match_hist_name
+            bits_per_char = 5
+
+        self.addCyclesPerInstructionToHistogram(match_name, bits_per_char, cycles_executed)
+        self.addOperationToInstructionsHistogram(match_name, bits_per_char)
+
+
 
     def get_cycles_executed(self):
         if self.seq_type == 'protein':

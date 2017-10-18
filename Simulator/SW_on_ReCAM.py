@@ -107,4 +107,4 @@ def SW_on_ReCAM(input_seqA="AGTTTC", input_seqB="TGCC"):
     #print("*** Performance (CUPs): ", len(seqA)*len(seqB) * storage.getFrequency()//storage.getCyclesCounter())
     return (total_max_score, total_max_row_index, total_max_col_index)
 
-SW_on_ReCAM()
+#SW_on_ReCAM()

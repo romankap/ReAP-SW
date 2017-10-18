@@ -3,6 +3,7 @@ import random
 
 import ReCAM, Simulator
 import SW_on_ReCAM
+import Multi_SW_on_ReCAM
 import Serial_SmithWaterman
 
 '''lib_path = os.path.abspath(os.path.join('swalign-0.3.3'))
@@ -90,5 +91,38 @@ def test():
 
     print("total cycles = ", simulator.getCycleCount())
 
+
+def Multi_SW_test():
+    random.seed()
+
+    #generate query seq
+    query_seq_len = random.randint(100, 300)
+    query_seq = get_random_sequence(query_seq_len)
+
+    DB_seq_list = []
+    #generate seq database
+    for i in range(0,20):
+        DB_seq_len = random.randint(5, 1000)
+        DB_seq = get_random_sequence(DB_seq_len)
+        DB_seq_list.append(DB_seq)
+
+    ReCAM_result = Multi_SW_on_ReCAM.Multi_SW_on_ReCAM(DB_seq_list, query_seq)
+
+    #serial execution results
+    serial_execution_scores = []
+    for DB_seq in DB_seq_list:
+        serial_execution_scores.append(Serial_SmithWaterman.main(input_seqA=DB_seq, input_seqB=query_seq)[0])
+
+    if not serial_execution_scores == ReCAM_result:
+        print("!!!!!!!!!!!!!!!!")
+        print("! ERROR: Serial != ReCAM !")
+        print("Serial result: ", serial_execution_scores)
+        print("ReCAM result: ", ReCAM_result)
+        print("!!!!!!!!!!!!!!!!")
+    else:
+        print("VVV CPU and ReCAM scores match VVV")
+
+
 #test()
-SW_test()
+#SW_test()
+Multi_SW_test()

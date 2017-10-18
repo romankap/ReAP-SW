@@ -51,7 +51,7 @@ def place_DB_seq_in_ReCAM(storage, start_row, first_row_col, buffer_row_col, shi
 
 
 def Multi_SW_on_ReCAM(DB_sequences, query_seq):
-    storage = ReCAM.ReCAM(32768)
+    storage = ReCAM.ReCAM(256*len(DB_sequences)* len(max(DB_sequences, key=len)))
     SEQUENCE_TYPE = 'DNA'
     if SEQUENCE_TYPE == 'protein':
         bits_per_sequence_char = amino_acid_bits
@@ -128,12 +128,12 @@ def Multi_SW_on_ReCAM(DB_sequences, query_seq):
         middle_AD = ((i-1) % 3) + first_AD_col_index
         left_AD = ((i-2) % 3) + first_AD_col_index
 
-        tagged_rows_list = storage.tagRowsEqualToConstant(buffer_row_col, 1, alg_start_row, alg_end_row)
-        storage.taggedRowWiseOperationWithConstant(None, 0, right_AD, tagged_rows_list, 'write')
-        storage.taggedRowWiseOperationWithConstant(None, 0, middle_AD, tagged_rows_list, 'write')
-        storage.taggedRowWiseOperationWithConstant(None, 0, E_col_index, tagged_rows_list, 'write')
-        storage.taggedRowWiseOperationWithConstant(None, 0, F_col_index, tagged_rows_list, 'write')
-        storage.taggedRowWiseOperationWithConstant(None, 0, temp_col_index, tagged_rows_list, 'write')
+        # tagged_rows_list = storage.tagRowsEqualToConstant(buffer_row_col, 1, alg_start_row, alg_end_row)
+        # storage.taggedRowWiseOperationWithConstant(None, 0, right_AD, tagged_rows_list, 'write')
+        # storage.taggedRowWiseOperationWithConstant(None, 0, middle_AD, tagged_rows_list, 'write')
+        # storage.taggedRowWiseOperationWithConstant(None, 0, E_col_index, tagged_rows_list, 'write')
+        # storage.taggedRowWiseOperationWithConstant(None, 0, F_col_index, tagged_rows_list, 'write')
+        # storage.taggedRowWiseOperationWithConstant(None, 0, temp_col_index, tagged_rows_list, 'write')
 
         if i == 0:
             tagged_rows_list = storage.tagRowsEqualToConstant(first_row_col, 1, alg_start_row, alg_end_row)
@@ -249,4 +249,4 @@ def test_Multi_SW_on_ReCAM():
 
     print("Serial results:", serial_execution_scores)
 
-test_Multi_SW_on_ReCAM()
+#test_Multi_SW_on_ReCAM()

@@ -139,8 +139,10 @@ class ReCAM:
         if tagged_rows_list==None:
             tagged_rows_list = []
         for row_index in range(start_row, end_row+1):
-            if self.crossbarArray[row_index][col_index] == const:
+            if self.crossbarArray[row_index][col_index] == const and row_index not in tagged_rows_list:
                 tagged_rows_list.append(row_index)
+
+        tagged_rows_list.sort()
 
         cycles_executed = self.crossbarColumns[col_index]
         self.advanceCycleCouter(cycles_executed)
@@ -216,7 +218,7 @@ class ReCAM:
         self.addOperationToInstructionsHistogram(shift_operation_hist_name, bits=self.crossbarColumns[col_index])
         self.addOperationToInstructionsHistogram(shifted_rows_num_hist_name, bits=self.crossbarColumns[col_index],
                                                  operations_to_add=abs(distance_to_shift)-1)
-        cycles_executed = 3 * self.crossbarColumns[col_index] # 3 cycles per shifted bit
+        cycles_executed = 6 * self.crossbarColumns[col_index] # 3 cycles per shifted bit
         self.addCyclesPerInstructionToHistogram(shift_operation_hist_name, self.crossbarColumns[col_index], cycles_executed)
         # Every additional row to shift, beyond the first, requires 'bit-length' additional cycles
         self.addCyclesPerInstructionToHistogram(shifted_rows_num_hist_name, self.crossbarColumns[col_index],

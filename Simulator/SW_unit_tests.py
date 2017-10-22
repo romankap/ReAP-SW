@@ -98,27 +98,15 @@ def Multi_SW_test():
     random.seed()
 
     #generate query seq
-    #query_seq_len = random.randint(3, 5)
-    #query_seq = get_random_sequence(query_seq_len)
-
-    #DB_seq_list = []
-    #generate seq database
-    #for i in range(0,20):
-    #    DB_seq_len = random.randint(2, 10)
-    #    DB_seq = get_random_sequence(DB_seq_len)
-    #    DB_seq_list.append(DB_seq)
-
-    #DEBUG rows start - Remove after finishing
-
-    query_seq = "TTTGC"
+    query_seq_len = random.randint(30, 50)
+    query_seq = get_random_sequence(query_seq_len)
 
     DB_seq_list = []
-    DB_seq_list.append("TGGCCCT")
-    DB_seq_list.append("TCGC")
-    DB_seq_list.append("AATAGCGAG")
-    DB_seq_list.append("GC")
-
-    # DEBUG rows end - Remove after finishing
+    #generate seq database
+    for i in range(0,20):
+       DB_seq_len = random.randint(5, 100)
+       DB_seq = get_random_sequence(DB_seq_len)
+       DB_seq_list.append(DB_seq)
 
     ReCAM_result = Multi_SW_on_ReCAM.Multi_SW_on_ReCAM(DB_seq_list, query_seq)
 

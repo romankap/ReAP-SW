@@ -237,9 +237,9 @@ def get_max_scores_from_DB_alignment(storage, DB_seq_list, column_index):
 
 def test_Multi_SW_on_ReCAM():
     DB_seq_list = []
-    #DB_seq_list.append("TGGCCCT")
-    #DB_seq_list.append("TCGC")
-    #DB_seq_list.append("AATAGCGAG")
+    DB_seq_list.append("TGGCCCT")
+    DB_seq_list.append("TCGC")
+    DB_seq_list.append("AATAGCGAG")
     DB_seq_list.append("TTTGC")
 
     query_seq = "GC"
@@ -252,4 +252,4 @@ def test_Multi_SW_on_ReCAM():
 
     print("Serial results:", serial_execution_scores)
 
-test_Multi_SW_on_ReCAM()
+#test_Multi_SW_on_ReCAM()

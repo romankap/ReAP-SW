@@ -23,7 +23,7 @@ def getOperatingRows(iteration, offset, lenA, lenB):
 
     return start_row+offset, end_row+offset
 
-def SW_on_ReCAM(input_seqA="AGTTTC", input_seqB="TGCC"):
+def SW_on_ReCAM(input_seqA="TTTGC", input_seqB="GC"):
     seqA = list(input_seqA)
     seqB = list(input_seqB)
     zero_vector = [0] * (len(seqA) + len(seqB) + 1)
@@ -107,4 +107,4 @@ def SW_on_ReCAM(input_seqA="AGTTTC", input_seqB="TGCC"):
     #print("*** Performance (CUPs): ", len(seqA)*len(seqB) * storage.getFrequency()//storage.getCyclesCounter())
     return (total_max_score, total_max_row_index, total_max_col_index)
 
-#SW_on_ReCAM()
+SW_on_ReCAM()

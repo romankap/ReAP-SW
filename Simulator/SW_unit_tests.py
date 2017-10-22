@@ -49,8 +49,10 @@ def generate_random_sequences():
 def SW_test():
     random.seed()
     # choose your own values here… 2 and -1 are common.
-    for i in range(0,50):
+    for i in range(0,1):
         (seqA, seqB) = generate_random_sequences()
+        seqA = "TGGCCCT"
+        seqB = "TTTGC"
 
         serial_result = Serial_SmithWaterman.main(input_seqA=seqA, input_seqB=seqB)
         ReCAM_result = SW_on_ReCAM.SW_on_ReCAM(input_seqA=seqA, input_seqB=seqB)
@@ -96,15 +98,27 @@ def Multi_SW_test():
     random.seed()
 
     #generate query seq
-    query_seq_len = random.randint(100, 300)
-    query_seq = get_random_sequence(query_seq_len)
+    #query_seq_len = random.randint(3, 5)
+    #query_seq = get_random_sequence(query_seq_len)
+
+    #DB_seq_list = []
+    #generate seq database
+    #for i in range(0,20):
+    #    DB_seq_len = random.randint(2, 10)
+    #    DB_seq = get_random_sequence(DB_seq_len)
+    #    DB_seq_list.append(DB_seq)
+
+    #DEBUG rows start - Remove after finishing
+
+    query_seq = "TTTGC"
 
     DB_seq_list = []
-    #generate seq database
-    for i in range(0,20):
-        DB_seq_len = random.randint(5, 1000)
-        DB_seq = get_random_sequence(DB_seq_len)
-        DB_seq_list.append(DB_seq)
+    DB_seq_list.append("TGGCCCT")
+    DB_seq_list.append("TCGC")
+    DB_seq_list.append("AATAGCGAG")
+    DB_seq_list.append("GC")
+
+    # DEBUG rows end - Remove after finishing
 
     ReCAM_result = Multi_SW_on_ReCAM.Multi_SW_on_ReCAM(DB_seq_list, query_seq)
 
@@ -118,6 +132,11 @@ def Multi_SW_test():
         print("! ERROR: Serial != ReCAM !")
         print("Serial result: ", serial_execution_scores)
         print("ReCAM result: ", ReCAM_result)
+        print("Query seq: ", query_seq)
+        print("------------ DB seq --------------")
+        for seq in DB_seq_list:
+            print(seq)
+
         print("!!!!!!!!!!!!!!!!")
     else:
         print("VVV CPU and ReCAM scores match VVV")

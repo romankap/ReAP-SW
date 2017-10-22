@@ -137,12 +137,7 @@ def Multi_SW_on_ReCAM(DB_sequences, query_seq, sequence_type='DNA'):
         # storage.taggedRowWiseOperationWithConstant(None, 0, F_col_index, tagged_rows_list, 'write')
         # storage.taggedRowWiseOperationWithConstant(None, 0, temp_col_index, tagged_rows_list, 'write')
 
-        if i == 0:
-            tagged_rows_list = storage.tagRowsEqualToConstant(first_row_col, 1, alg_start_row, alg_end_row)
-            storage.taggedRowWiseOperation(first_row_col, None, active_bit_col, tagged_rows_list, 'copy')
-            storage.taggedRowWiseOperation(first_row_col, None, shift_E_left_AD_col, tagged_rows_list, 'copy')
-            storage.taggedRowWiseOperationWithConstant(None, query_seq[i], query_seq_col, tagged_rows_list, 'write')
-        else:
+        if i > 0:
             if i < len(query_seq):
                 tagged_rows_list = storage.tagRowsEqualToConstant(active_bit_col, 1, alg_start_row, alg_end_row)
             else: # All query sequence characters were written
@@ -165,7 +160,7 @@ def Multi_SW_on_ReCAM(DB_sequences, query_seq, sequence_type='DNA'):
 
             storage.taggedRowWiseOperation(active_bit_col, None, shift_E_left_AD_col, tagged_rows_list, 'copy')
             storage.shiftColumnOnTaggedRows(active_bit_col, tagged_rows_list)
-            tagged_rows_list = storage.tagRowsEqualToConstant(active_bit_col, 1, alg_start_row, alg_end_row)
+            tagged_rows_list = storage.tagRowsEqualToConstant(shift_E_left_AD_col, 1, alg_start_row, alg_end_row)
             tagged_rows_list = storage.untagRowsNotEqualToConstant(buffer_row_col, 0, tagged_rows_list)
             storage.shiftColumnOnTaggedRows(query_seq_col, tagged_rows_list)
 
@@ -179,6 +174,11 @@ def Multi_SW_on_ReCAM(DB_sequences, query_seq, sequence_type='DNA'):
             if i < len(query_seq):
                 tagged_rows_list = storage.tagRowsEqualToConstant(first_row_col, 1, alg_start_row, alg_end_row)
                 storage.taggedRowWiseOperationWithConstant(None, query_seq[i], query_seq_col, tagged_rows_list, 'write')
+        else:   # i == 0
+            tagged_rows_list = storage.tagRowsEqualToConstant(first_row_col, 1, alg_start_row, alg_end_row)
+            storage.taggedRowWiseOperation(first_row_col, None, active_bit_col, tagged_rows_list, 'copy')
+            #storage.taggedRowWiseOperation(first_row_col, None, shift_E_left_AD_col, tagged_rows_list, 'copy')
+            storage.taggedRowWiseOperationWithConstant(None, query_seq[i], query_seq_col, tagged_rows_list, 'write')
         #tagged_rows_list = storage.tagRowsEqualToConstant(active_bit_col, 1, alg_start_row, alg_end_row)
 
         tagged_rows_list = storage.tagRowsEqualToConstant(active_bit_col, 1, alg_start_row, alg_end_row)
@@ -237,12 +237,13 @@ def get_max_scores_from_DB_alignment(storage, DB_seq_list, column_index):
 
 def test_Multi_SW_on_ReCAM():
     DB_seq_list = []
-    DB_seq_list.append("ACCG")
-    DB_seq_list.append("GTA")
-    DB_seq_list.append("AGTTTC")
+    #DB_seq_list.append("TGGCCCT")
+    #DB_seq_list.append("TCGC")
+    #DB_seq_list.append("AATAGCGAG")
+    DB_seq_list.append("TTTGC")
 
-    query_seq = "TGCC"
-    max_scores = Multi_SW_on_ReCAM(DB_seq_list, query_seq, 'protein')
+    query_seq = "GC"
+    max_scores = Multi_SW_on_ReCAM(DB_seq_list, query_seq, 'DNA')
     print("Mutli-SW Scores:", max_scores)
 
     serial_execution_scores = []

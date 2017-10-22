@@ -174,7 +174,7 @@ def Multi_SW_on_ReCAM(DB_sequences, query_seq, sequence_type='DNA'):
             if i < len(query_seq):
                 tagged_rows_list = storage.tagRowsEqualToConstant(first_row_col, 1, alg_start_row, alg_end_row)
                 storage.taggedRowWiseOperationWithConstant(None, query_seq[i], query_seq_col, tagged_rows_list, 'write')
-        else:   # i == 0
+        else: # i == 0
             tagged_rows_list = storage.tagRowsEqualToConstant(first_row_col, 1, alg_start_row, alg_end_row)
             storage.taggedRowWiseOperation(first_row_col, None, active_bit_col, tagged_rows_list, 'copy')
             #storage.taggedRowWiseOperation(first_row_col, None, shift_E_left_AD_col, tagged_rows_list, 'copy')
@@ -193,9 +193,9 @@ def Multi_SW_on_ReCAM(DB_sequences, query_seq, sequence_type='DNA'):
 
         #storage.shiftColumnOnTaggedRows(active_bit_col, tagged_rows_list, -1)
         # prevent shifting non-zero values: zero buffer row
-        tagged_rows_list = storage.tagRowsEqualToConstant(buffer_row_col, 1, alg_start_row, alg_end_row)
-        storage.taggedRowWiseOperationWithConstant(None, 0, left_AD, tagged_rows_list, 'write')
-        storage.taggedRowWiseOperationWithConstant(None, 0, E_col_index, tagged_rows_list, 'write')
+        tagged_rows_list = storage.tagRowsEqualToConstant(buffer_row_col, 1, alg_start_row, alg_end_row) #Only in multi-SW
+        storage.taggedRowWiseOperationWithConstant(None, 0, left_AD, tagged_rows_list, 'write') #Only in multi-SW
+        storage.taggedRowWiseOperationWithConstant(None, 0, E_col_index, tagged_rows_list, 'write') #Only in multi-SW
         #shift values
         tagged_rows_list = storage.tagRowsEqualToConstant(shift_E_left_AD_col, 1, alg_start_row, alg_end_row)
         storage.shiftColumnOnTaggedRows(E_col_index, tagged_rows_list, 1)
